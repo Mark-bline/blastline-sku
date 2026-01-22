@@ -35,9 +35,7 @@ class GithubStorage:
             r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
             if r.status_code == 200:
                 content = r.json()
-                # Store SHA to allow updating later
                 st.session_state["github_sha"] = content["sha"]
-                # Decode Base64 content
                 file_content = base64.b64decode(content["content"]).decode("utf-8")
                 return json.loads(file_content)
         except Exception as e:
@@ -60,14 +58,12 @@ class GithubStorage:
                 "branch": self.branch
             }
             
-            # If we loaded the file previously, we must include the SHA to update it
             if "github_sha" in st.session_state:
                 payload["sha"] = st.session_state["github_sha"]
                 
             r = requests.put(self.api_url, headers=self.headers, json=payload)
             
             if r.status_code in [200, 201]:
-                # Update the new SHA so subsequent saves work
                 st.session_state["github_sha"] = r.json()["content"]["sha"]
                 return True
             else:
@@ -80,15 +76,13 @@ class GithubStorage:
 # --- INITIALIZE DATA ---
 if "sku_data" not in st.session_state:
     gh = GithubStorage()
-    
-    # 1. Try loading from GitHub
     remote_data = gh.load_data()
     
     if remote_data:
         st.session_state["sku_data"] = remote_data
         st.toast("Data loaded from GitHub!", icon="☁️")
     else:
-        # 2. Fallback to Default (First Run)
+        # Fallback Defaults
         st.session_state["sku_data"] = {
             "inventory": {
                 "Blast Machine": {
@@ -149,6 +143,13 @@ def copy_to_clipboard_html(text):
     }}
     </script>
     """
+
+# Helper to safely convert order to int for sorting
+def safe_int_sort(x):
+    try:
+        return int(x.get('order', 99))
+    except (ValueError, TypeError):
+        return 999
 
 def generate_full_matrix_df():
     inventory = st.session_state["sku_data"]["inventory"]
@@ -241,7 +242,14 @@ def render_home():
             
         for key in sorted_fields:
             opts = fields_dict[key]
-            opts = sorted(opts, key=lambda x: int(x.get('order', 99)))
+            
+            # --- SAFE SORTING APPLIED ---
+            try:
+                opts = sorted(opts, key=safe_int_sort)
+            except Exception:
+                pass # Use unsorted if catastrophic failure
+            # ----------------------------
+            
             if opts:
                 choice = st.selectbox(key, opts, format_func=get_option_label, key=f"home_{category}_{key}")
                 selections[key] = choice['code']
@@ -339,7 +347,6 @@ def render_admin():
     st.title("⚙️ Admin Settings")
     c1, c2 = st.columns([6,1])
     with c2:
-        # UPDATED: SAVE TO GITHUB BUTTON
         if st.button("☁️ Save to Cloud", type="primary", help="Saves data permanently to GitHub"):
             gh = GithubStorage()
             if gh.save_data(st.session_state["sku_data"]):
@@ -474,4 +481,3 @@ elif st.session_state["current_page"] == "login":
     render_login()
 elif st.session_state["current_page"] == "admin":
     render_admin()
-
