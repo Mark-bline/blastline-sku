@@ -6,14 +6,14 @@ import math
 import requests
 import base64
 
-# =====================================================
+# ==========================================
 # 1. SETUP
-# =====================================================
+# ==========================================
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
-# =====================================================
+# ==========================================
 # 2. GITHUB STORAGE
-# =====================================================
+# ==========================================
 class GithubStorage:
     def __init__(self):
         if "github" in st.secrets:
@@ -53,11 +53,13 @@ class GithubStorage:
             return True
         return False
 
-# =====================================================
-# 3. DATA NORMALIZATION HELPERS
-# =====================================================
+# ==========================================
+# 3. HELPERS
+# ==========================================
+def get_option_label(item):
+    return f"{item['code']}: {item['name']}"
+
 def normalize_fields_structure(cat_data):
-    """Backward compatible: wrap fields with order + options"""
     fields = cat_data.get("fields", {})
     normalized = {}
     for i, (fname, fval) in enumerate(fields.items(), start=1):
@@ -67,20 +69,7 @@ def normalize_fields_structure(cat_data):
             normalized[fname] = {"order": i, "options": fval}
     cat_data["fields"] = normalized
 
-def normalize_option_df(data):
-    if not data:
-        df = pd.DataFrame(columns=["code", "name", "order"])
-    else:
-        df = pd.DataFrame(data)
-    for col in ["code", "name", "order"]:
-        if col not in df.columns:
-            df[col] = ""
-    df = df[["code", "name", "order"]]
-    if df["order"].isnull().all() or df["order"].eq("").all():
-        df["order"] = range(1, len(df) + 1)
-    return df
-
-def ordered_fields(fields_dict):
+def get_ordered_field_keys(fields_dict):
     return [
         k for k, v in sorted(
             fields_dict.items(),
@@ -88,24 +77,26 @@ def ordered_fields(fields_dict):
         )
     ]
 
-# =====================================================
-# 4. SKU BUILDER (SINGLE SOURCE OF TRUTH)
-# =====================================================
-def build_sku(fields_dict, selections, separator, extras_codes=None):
-    parts = []
-    for fname in ordered_fields(fields_dict):
-        val = selections.get(fname)
-        if val:
-            parts.append(str(val))
-    base = separator.join(parts)
-    extras = "".join(extras_codes or [])
-    if separator and base and extras:
-        return base + separator + extras
-    return base + extras
+def normalize_options_df(data):
+    if not data:
+        df = pd.DataFrame(columns=["code", "name", "order"])
+    else:
+        df = pd.DataFrame(data)
 
-# =====================================================
-# 5. INIT DATA
-# =====================================================
+    for col in ["code", "name", "order"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    df = df[["code", "name", "order"]]
+
+    if df["order"].isnull().all() or df["order"].eq("").all():
+        df["order"] = range(1, len(df) + 1)
+
+    return df
+
+# ==========================================
+# 4. INIT STATE
+# ==========================================
 if "sku_data" not in st.session_state:
     gh = GithubStorage()
     data = gh.load_data()
@@ -121,18 +112,26 @@ def navigate(page):
     st.session_state["current_page"] = page
     st.rerun()
 
-# =====================================================
-# 6. HOME PAGE
-# =====================================================
+# ==========================================
+# 5. HOME PAGE (UNCHANGED UI)
+# ==========================================
 def render_home():
+    with st.sidebar:
+        if st.button("⚙️ Admin Settings", use_container_width=True):
+            navigate("login")
+
     st.title("Blastline SKU Configurator")
+    st.markdown("---")
 
     inventory = st.session_state["sku_data"]["inventory"]
     if not inventory:
-        st.info("No categories configured")
+        st.warning("No categories configured.")
         return
 
-    category = st.selectbox("Product Category", list(inventory.keys()))
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        category = st.selectbox("Product Category", list(inventory.keys()))
+
     cat_data = inventory[category]
     normalize_fields_structure(cat_data)
 
@@ -140,37 +139,47 @@ def render_home():
     extras = cat_data.get("extras", [])
     separator = cat_data.get("settings", {}).get("separator", "")
 
+    col1, col2 = st.columns([1, 1])
     selections = {}
-    for fname in ordered_fields(fields):
-        opts = fields[fname]["options"]
-        is_text = opts and isinstance(opts[0], dict) and opts[0].get("type") == "text"
-        if is_text:
-            selections[fname] = st.text_input(fname)
-        else:
-            if opts:
-                choice = st.selectbox(
-                    fname,
-                    sorted(opts, key=lambda x: int(x.get("order", 99))),
-                    format_func=lambda x: f"{x['code']} - {x['name']}"
-                )
-                selections[fname] = choice["code"]
 
-    selected_extras = []
-    for e in extras:
-        if st.checkbox(e["name"]):
-            if e.get("code"):
-                selected_extras.append(str(e["code"]))
+    with col1:
+        st.subheader("Configuration")
+        for key in get_ordered_field_keys(fields):
+            opts = fields[key]["options"]
+            is_text = opts and isinstance(opts[0], dict) and opts[0].get("type") == "text"
 
-    sku = build_sku(fields, selections, separator, selected_extras)
-    st.subheader("Generated SKU")
-    st.code(sku or "—")
+            if is_text:
+                selections[key] = st.text_input(key)
+            else:
+                if opts:
+                    choice = st.selectbox(
+                        key,
+                        sorted(opts, key=lambda x: int(x.get("order", 99))),
+                        format_func=get_option_label
+                    )
+                    selections[key] = choice["code"]
 
-    if st.button("⚙️ Admin"):
-        navigate("login")
+    with col2:
+        st.subheader("Extras / Add-ons")
+        selected_extras = []
+        for e in extras:
+            if st.checkbox(e["name"]):
+                if e.get("code"):
+                    selected_extras.append(str(e["code"]))
 
-# =====================================================
-# 7. LOGIN
-# =====================================================
+        st.markdown("---")
+        st.subheader("Generated SKU")
+
+        base_parts = [selections.get(k, "") for k in get_ordered_field_keys(fields) if selections.get(k)]
+        sku = separator.join(base_parts)
+        if selected_extras:
+            sku = sku + (separator if separator else "") + "".join(selected_extras)
+
+        st.code(sku or "—")
+
+# ==========================================
+# 6. LOGIN
+# ==========================================
 def render_login():
     st.subheader("Admin Login")
     pw = st.text_input("Password", type="password")
@@ -179,49 +188,57 @@ def render_login():
             navigate("admin")
         else:
             st.error("Invalid password")
+    if st.button("Cancel"):
+        navigate("home")
 
-# =====================================================
-# 8. ADMIN PAGE
-# =====================================================
+# ==========================================
+# 7. ADMIN PAGE (UI PRESERVED)
+# ==========================================
 def render_admin():
-    st.title("⚙️ Admin Configuration")
+    st.title("⚙️ Admin Settings")
 
     inventory = st.session_state["sku_data"]["inventory"]
-    cat = st.selectbox("Category", list(inventory.keys()))
-    cat_data = inventory[cat]
+    selected_cat = st.selectbox("Product Category", list(inventory.keys()))
+
+    cat_data = inventory[selected_cat]
     normalize_fields_structure(cat_data)
 
     fields = cat_data["fields"]
 
-    # ---------- FIELD REORDER ----------
-    st.subheader("Field Order")
-    field_df = pd.DataFrame([
-        {"Field": k, "Order": v.get("order", i+1)}
+    st.markdown("---")
+    st.subheader("🔀 Field Order")
+
+    field_order_df = pd.DataFrame([
+        {"Field Name": k, "Order": v.get("order", i + 1)}
         for i, (k, v) in enumerate(fields.items())
-    ])
-    edited = st.data_editor(
-        field_df,
+    ]).sort_values("Order")
+
+    edited_order_df = st.data_editor(
+        field_order_df,
         hide_index=True,
         column_config={
-            "Field": st.column_config.TextColumn(disabled=True),
+            "Field Name": st.column_config.TextColumn(disabled=True),
             "Order": st.column_config.NumberColumn(min_value=1)
-        }
+        },
+        use_container_width=True
     )
+
     if st.button("Apply Field Order"):
-        for _, r in edited.iterrows():
-            fields[r["Field"]]["order"] = int(r["Order"])
+        for _, row in edited_order_df.iterrows():
+            fields[row["Field Name"]]["order"] = int(row["Order"])
         st.success("Field order updated")
         st.rerun()
 
-    # ---------- FIELD OPTIONS ----------
-    st.subheader("Edit Field Options")
-    field_name = st.selectbox("Select Field", ordered_fields(fields))
-    field_data = fields[field_name]["options"]
+    st.markdown("---")
+    st.subheader("🛠️ Field Options")
+
+    field_to_edit = st.selectbox("Select Field", get_ordered_field_keys(fields))
+    field_data = fields[field_to_edit]["options"]
 
     if field_data and isinstance(field_data[0], dict) and field_data[0].get("type") == "text":
-        st.info("Text input field – no options")
+        st.info("Text input field – no options to edit.")
     else:
-        df = normalize_option_df(field_data)
+        df = normalize_options_df(field_data)
         edited_df = st.data_editor(
             df,
             num_rows="dynamic",
@@ -230,30 +247,32 @@ def render_admin():
                 "code": st.column_config.TextColumn("SKU Code", required=True),
                 "name": st.column_config.TextColumn("Display Name", required=True),
                 "order": st.column_config.NumberColumn("Sort Order", min_value=1)
-            }
+            },
+            use_container_width=True
         )
+
         if st.button("Update Options"):
-            fields[field_name]["options"] = edited_df.to_dict("records")
+            fields[field_to_edit]["options"] = edited_df.to_dict("records")
             st.success("Options updated")
 
-    # ---------- LIVE SKU PREVIEW ----------
     st.markdown("---")
     st.subheader("🔍 Live SKU Preview")
 
     preview_sel = {}
-    for fname in ordered_fields(fields):
-        opts = fields[fname]["options"]
+    for key in get_ordered_field_keys(fields):
+        opts = fields[key]["options"]
         is_text = opts and isinstance(opts[0], dict) and opts[0].get("type") == "text"
+
         if is_text:
-            preview_sel[fname] = st.text_input(f"{fname} (Preview)")
+            preview_sel[key] = st.text_input(f"{key} (Preview)")
         else:
             if opts:
-                c = st.selectbox(
-                    f"{fname} (Preview)",
+                choice = st.selectbox(
+                    f"{key} (Preview)",
                     opts,
-                    format_func=lambda x: f"{x['code']} - {x['name']}"
+                    format_func=get_option_label
                 )
-                preview_sel[fname] = c["code"]
+                preview_sel[key] = choice["code"]
 
     preview_extras = []
     for e in cat_data.get("extras", []):
@@ -261,20 +280,23 @@ def render_admin():
             if e.get("code"):
                 preview_extras.append(str(e["code"]))
 
-    sep = cat_data.get("settings", {}).get("separator", "")
-    preview_sku = build_sku(fields, preview_sel, sep, preview_extras)
+    base = separator = cat_data.get("settings", {}).get("separator", "")
+    base_parts = [preview_sel.get(k, "") for k in get_ordered_field_keys(fields) if preview_sel.get(k)]
+    preview_sku = separator.join(base_parts)
+    if preview_extras:
+        preview_sku = preview_sku + (separator if separator else "") + "".join(preview_extras)
+
     st.code(preview_sku or "—")
 
-    # ---------- SAVE ----------
     st.markdown("---")
-    if st.button("☁️ Save to GitHub"):
+    if st.button("☁️ Save to Cloud"):
         if GithubStorage().save_data(st.session_state["sku_data"]):
             st.success("Saved successfully")
             navigate("home")
 
-# =====================================================
-# 9. ROUTER
-# =====================================================
+# ==========================================
+# 8. ROUTER
+# ==========================================
 if st.session_state["current_page"] == "home":
     render_home()
 elif st.session_state["current_page"] == "login":
