@@ -6,51 +6,66 @@
         "separator": ""
       },
       "fields": {
-        "Type": [
-          {
-            "code": "H",
-            "name": "Helmet Breathing Air",
-            "order": 1
-          }
-        ],
-        "Material / Config": [
-          {
-            "code": "NBR/PVC",
-            "name": "NBR/PVC",
-            "order": 1
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "06",
-            "name": "3/8",
-            "order": 1
-          }
-        ],
-        "Length / Variant": [
-          {
-            "code": "020",
-            "name": "20",
-            "order": 1
-          },
-          {
-            "code": "040",
-            "name": "40",
-            "order": 2
-          },
-          {
-            "code": "100",
-            "name": "100",
-            "order": 3
-          }
-        ],
-        "Pressure / Spec": [
-          {
-            "code": "20",
-            "name": "20Bar/300Psi",
-            "order": 1
-          }
-        ]
+        "Type": {
+          "order": 1,
+          "options": [
+            {
+              "code": "H",
+              "name": "Helmet Breathing Air",
+              "order": 1
+            }
+          ]
+        },
+        "Material / Config": {
+          "order": 2,
+          "options": [
+            {
+              "code": "NBR/PVC",
+              "name": "NBR/PVC",
+              "order": 1
+            }
+          ]
+        },
+        "Size / Capacity": {
+          "order": 3,
+          "options": [
+            {
+              "code": "06",
+              "name": "3/8",
+              "order": 1
+            }
+          ]
+        },
+        "Length / Variant": {
+          "order": 4,
+          "options": [
+            {
+              "code": "020",
+              "name": "20",
+              "order": 1
+            },
+            {
+              "code": "040",
+              "name": "40",
+              "order": 2
+            },
+            {
+              "code": "100",
+              "name": "100",
+              "order": 3
+            }
+          ]
+        },
+        "Pressure / Spec": {
+          "order": 5,
+          "options": [
+            {
+              "code": "20",
+              "name": "20Bar/300Psi",
+              "order": 1
+            }
+          ]
+        }
       },
       "extras": []
     },
@@ -274,79 +289,91 @@
         "separator": ""
       },
       "fields": {
-        "Type": [
-          {
-            "code": "BL",
-            "name": "Blast Machine",
-            "order": 1
-          }
-        ],
-        "Material / Config": [
-          {
-            "code": "M",
-            "name": "M",
-            "order": 1
-          },
-          {
-            "code": "C",
-            "name": "C",
-            "order": 2
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "20",
-            "name": "1080",
-            "order": 1
-          },
-          {
-            "code": "30",
-            "name": "1090",
-            "order": 2
-          },
-          {
-            "code": "50",
-            "name": "14160",
-            "order": 3
-          },
-          {
-            "code": "100",
-            "name": "20300",
-            "order": 4
-          },
-          {
-            "code": "200",
-            "name": "24650",
-            "order": 5
-          },
-          {
-            "code": "300",
-            "name": "24800",
-            "order": 6
-          }
-        ],
-        "Pressure / Spec": [
-          {
-            "code": "S",
-            "name": "S",
-            "order": 1
-          },
-          {
-            "code": "ST",
-            "name": "ST",
-            "order": 2
-          },
-          {
-            "code": "P",
-            "name": "P",
-            "order": 3
-          },
-          {
-            "code": "U",
-            "name": "U",
-            "order": 4
-          }
-        ]
+        "Type": {
+          "order": 1,
+          "options": [
+            {
+              "code": "BL",
+              "name": "Blast Machine",
+              "order": 1
+            }
+          ]
+        },
+        "Material / Config": {
+          "order": 2,
+          "options": [
+            {
+              "code": "M",
+              "name": "M",
+              "order": 1
+            },
+            {
+              "code": "C",
+              "name": "C",
+              "order": 2
+            }
+          ]
+        },
+        "Size / Capacity": {
+          "order": 3,
+          "options": [
+            {
+              "code": "20",
+              "name": "1080",
+              "order": 1
+            },
+            {
+              "code": "30",
+              "name": "1090",
+              "order": 2
+            },
+            {
+              "code": "50",
+              "name": "14160",
+              "order": 3
+            },
+            {
+              "code": "100",
+              "name": "20300",
+              "order": 4
+            },
+            {
+              "code": "200",
+              "name": "24650",
+              "order": 5
+            },
+            {
+              "code": "300",
+              "name": "24800",
+              "order": 6
+            }
+          ]
+        },
+        "Pressure / Spec": {
+          "order": 4,
+          "options": [
+            {
+              "code": "S",
+              "name": "S",
+              "order": 1
+            },
+            {
+              "code": "ST",
+              "name": "ST",
+              "order": 2
+            },
+            {
+              "code": "P",
+              "name": "P",
+              "order": 3
+            },
+            {
+              "code": "U",
+              "name": "U",
+              "order": 4
+            }
+          ]
+        }
       },
       "extras": []
     },
