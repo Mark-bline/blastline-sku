@@ -14,7 +14,6 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 # --- GITHUB STORAGE HANDLER ---
 class GithubStorage:
     def __init__(self):
-        # Check if secrets are set up
         if "github" in st.secrets:
             self.token = st.secrets["github"]["token"]
             self.owner = st.secrets["github"]["owner"]
@@ -28,9 +27,7 @@ class GithubStorage:
             self.can_connect = False
 
     def load_data(self):
-        """Loads JSON from GitHub. Returns None if file doesn't exist yet."""
         if not self.can_connect: return None
-        
         try:
             r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
             if r.status_code == 200:
@@ -43,26 +40,20 @@ class GithubStorage:
         return None
 
     def save_data(self, data):
-        """Updates the file on GitHub."""
         if not self.can_connect:
             st.error("GitHub secrets not configured!")
             return False
-            
         try:
             json_str = json.dumps(data, indent=2)
             content_b64 = base64.b64encode(json_str.encode("utf-8")).decode("utf-8")
-            
             payload = {
                 "message": "Update SKU Config (Streamlit App)",
                 "content": content_b64,
                 "branch": self.branch
             }
-            
             if "github_sha" in st.session_state:
                 payload["sha"] = st.session_state["github_sha"]
-                
             r = requests.put(self.api_url, headers=self.headers, json=payload)
-            
             if r.status_code in [200, 201]:
                 st.session_state["github_sha"] = r.json()["content"]["sha"]
                 return True
@@ -73,7 +64,7 @@ class GithubStorage:
             st.error(f"Error saving to GitHub: {e}")
             return False
 
-# --- INITIALIZE DATA ---
+# --- INITIALIZE DATA (FROM MASTER PDF) ---
 if "sku_data" not in st.session_state:
     gh = GithubStorage()
     remote_data = gh.load_data()
@@ -82,18 +73,96 @@ if "sku_data" not in st.session_state:
         st.session_state["sku_data"] = remote_data
         st.toast("Data loaded from GitHub!", icon="☁️")
     else:
-        # Fallback Defaults
+        # === MASTER DATA PRE-LOAD ===
         st.session_state["sku_data"] = {
             "inventory": {
+                # 1. BLAST MACHINE (Separated by hyphens)
                 "Blast Machine": {
-                    "settings": {"extras_mode": "Multiple"},
+                    "settings": {"extras_mode": "Multiple", "separator": "-"},
                     "fields": {
                         "Brand": [{"code": "BL", "name": "Blastline", "order": 1}],
-                        "Capacity": [{"code": "20", "name": "1080", "order": 1}]
+                        "Capacity": [
+                            {"code": "20", "name": "1080 (20L)", "order": 1},
+                            {"code": "30", "name": "1090 (30L)", "order": 2},
+                            {"code": "200", "name": "24650 (200L)", "order": 3}
+                        ],
+                        "Configuration": [
+                            {"code": "M", "name": "Manual", "order": 1},
+                            {"code": "C", "name": "Contractor", "order": 2}
+                        ],
+                        "Certification": [
+                            {"code": "S", "name": "Standard", "order": 1},
+                            {"code": "CE", "name": "CE Certified", "order": 2}
+                        ],
+                        "Valve": [
+                            {"code": "F", "name": "Flat Sand", "order": 1},
+                            {"code": "T", "name": "Thompson", "order": 2}
+                        ]
                     },
                     "extras": [
-                        {"name": "Remote Control", "code": "R", "selected": False}
+                        {"name": "Moisture Separator", "code": "01", "selected": False},
+                        {"name": "PG + RV", "code": "02", "selected": False}
                     ]
+                },
+                # 2. HOSE - AIR (No separator, concatenated)
+                "Hose - Air": {
+                    "settings": {"extras_mode": "Single", "separator": ""},
+                    "fields": {
+                        "Main Category": [{"code": "H", "name": "Hose", "order": 1}],
+                        "Application": [{"code": "A", "name": "Air", "order": 1}],
+                        "Material": [
+                            {"code": "P", "name": "NBR/PVC", "order": 1},
+                            {"code": "R", "name": "Rubber", "order": 2}
+                        ],
+                        "Size": [
+                            {"code": "08", "name": "1/2 inch", "order": 1},
+                            {"code": "16", "name": "1 inch", "order": 2}
+                        ],
+                        "Roll Length": [
+                            {"code": "020", "name": "20 mtr", "order": 1},
+                            {"code": "040", "name": "40 mtr", "order": 2}
+                        ],
+                        "Pressure": [
+                            {"code": "20", "name": "20 Bar / 300 Psi", "order": 1}
+                        ]
+                    },
+                    "extras": []
+                },
+                 # 3. COUPLINGS (Chicago/Crowfoot)
+                "Couplings": {
+                    "settings": {"extras_mode": "Single", "separator": ""},
+                    "fields": {
+                        "Main Category": [{"code": "C", "name": "Couplings", "order": 1}],
+                        "Lug Type": [
+                            {"code": "2L", "name": "Chicago 2 Lug", "order": 1},
+                            {"code": "4L", "name": "Crowfoot 4 Lug", "order": 2}
+                        ],
+                        "End Type": [
+                            {"code": "HE", "name": "Hose End", "order": 1},
+                            {"code": "ME", "name": "Male End", "order": 2},
+                            {"code": "FE", "name": "Female End", "order": 3}
+                        ],
+                        "Size": [
+                            {"code": "04", "name": "1/4 inch", "order": 1},
+                            {"code": "12", "name": "3/4 inch", "order": 2},
+                            {"code": "16", "name": "1 inch", "order": 3}
+                        ],
+                         "Supplier": [
+                            {"code": "TFG", "name": "Tuticorin Finished", "order": 1},
+                            {"code": "YC", "name": "Yangcheng", "order": 2}
+                        ]
+                    },
+                    "extras": []
+                },
+                # 4. GRACO (Text Input Example)
+                "Graco": {
+                    "settings": {"extras_mode": "Single", "separator": ""},
+                    "fields": {
+                        "Prefix": [{"code": "PG", "name": "Graco Part", "order": 1}],
+                        # Special flag 'is_text_input' for manual entry
+                        "Part Number": [{"code": "", "name": "Enter No.", "order": 1, "type": "text"}]
+                    },
+                    "extras": []
                 }
             }
         }
@@ -158,16 +227,27 @@ def generate_full_matrix_df():
         fields_dict = cat_data.get("fields", {})
         extras_list = cat_data.get("extras", [])
         mode = cat_data.get("settings", {}).get("extras_mode", "Multiple")
+        separator = cat_data.get("settings", {}).get("separator", "")
         
         if not fields_dict and not extras_list: continue
         
         core_lists = []
         field_keys = list(fields_dict.keys())
-        priority = ["Brand", "Capacity", "Configuration", "Certification", "Valve", "Screen / Cover"]
-        sorted_keys = [k for k in priority if k in field_keys] + [k for k in field_keys if k not in priority]
         
-        for key in sorted_keys:
-            core_lists.append(fields_dict[key])
+        # We only generate matrix for Dropdown fields. Text fields complicate matrix generation.
+        # We will assume empty string for text fields in matrix.
+        for key in field_keys:
+            # check if text input
+            is_text = False
+            if fields_dict[key] and isinstance(fields_dict[key][0], dict):
+                 if fields_dict[key][0].get("type") == "text":
+                     is_text = True
+            
+            if is_text:
+                # Add a dummy placeholder for text fields in matrix
+                core_lists.append([{"code": "###", "name": "[Manual Input]"}])
+            else:
+                core_lists.append(fields_dict[key])
             
         if not core_lists: core_combinations = [([],)]
         else: core_combinations = list(itertools.product(*core_lists))
@@ -176,12 +256,10 @@ def generate_full_matrix_df():
         if mode == "Single":
             extras_combinations.append({"code": "", "name": "None"})
             for ex in extras_list:
-                # SAFE CHECK for extras in matrix
                 code = ex.get("code")
                 if code and str(code).strip():
                     extras_combinations.append({"code": str(code), "name": ex["name"]})
         else:
-            # Filter out invalid extras first
             valid_extras = [e for e in extras_list if e.get("code") and str(e.get("code")).strip()]
             for r in range(len(valid_extras) + 1):
                 for combo in itertools.combinations(valid_extras, r):
@@ -193,14 +271,17 @@ def generate_full_matrix_df():
                         extras_combinations.append({"code": c_code, "name": c_name})
         
         for core in core_combinations:
-            base_sku = "".join([item["code"] for item in core]) if core and core[0] else ""
+            base_sku = separator.join([item["code"] for item in core]) if core and core[0] else ""
             base_desc = " | ".join([item["name"] for item in core]) if core and core[0] else ""
             
             for extra in extras_combinations:
-                full_sku = base_sku + extra["code"]
-                separator = " | " if base_desc and extra["name"] != "None" else ""
+                # Add separator before extra if needed, or just append based on logic
+                # Usually extras are appended with separator if the main sku used one
+                full_sku = base_sku + (separator if separator and extra["code"] else "") + extra["code"]
+                
+                desc_sep = " | " if base_desc and extra["name"] != "None" else ""
                 extra_desc = extra["name"] if extra["name"] != "None" else ""
-                full_desc = f"{base_desc}{separator}{extra_desc}"
+                full_desc = f"{base_desc}{desc_sep}{extra_desc}"
                 rows.append({"Category": cat_name, "Generated SKU": full_sku, "Full Description": full_desc})
             
     return pd.DataFrame(rows)
@@ -225,12 +306,15 @@ def render_home():
         st.warning("No Categories Configured.")
         return
 
-    category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
+    c_cat1, c_cat2 = st.columns([1, 1])
+    with c_cat1:
+        category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
     
     cat_data = inventory.get(category, {})
     fields_dict = cat_data.get("fields", {})
     extras_list = cat_data.get("extras", [])
     extras_mode = cat_data.get("settings", {}).get("extras_mode", "Multiple")
+    separator = cat_data.get("settings", {}).get("separator", "")
 
     col1, col2 = st.columns([1, 1])
     selections = {}
@@ -238,29 +322,42 @@ def render_home():
     with col1:
         st.subheader("Configuration")
         field_keys = list(fields_dict.keys())
-        priority = ["Brand", "Capacity", "Configuration", "Certification", "Valve", "Screen / Cover"]
-        sorted_fields = [k for k in priority if k in field_keys] + [k for k in field_keys if k not in priority]
+        # No specific priority hardcoded, use insertion order or 'order' key if needed
+        # Just use list order for now
         
-        if not sorted_fields:
+        if not field_keys:
             st.info("No fields configured for this category.")
             
-        for key in sorted_fields:
+        for key in field_keys:
             opts = fields_dict[key]
-            try:
-                opts = sorted(opts, key=safe_int_sort)
-            except Exception: pass
             
-            if opts:
-                choice = st.selectbox(key, opts, format_func=get_option_label, key=f"home_{category}_{key}")
-                selections[key] = choice['code']
+            # Check if this field is a TEXT INPUT field
+            is_text_input = False
+            if opts and isinstance(opts[0], dict):
+                 if opts[0].get("type") == "text":
+                     is_text_input = True
+            
+            if is_text_input:
+                # Render Text Input
+                val = st.text_input(key, key=f"home_{category}_{key}")
+                selections[key] = val # Use typed value directly
             else:
-                selections[key] = ""
-                st.warning(f"No options in {key}")
+                # Render Dropdown
+                try:
+                    opts = sorted(opts, key=safe_int_sort)
+                except Exception: pass
+                
+                if opts:
+                    choice = st.selectbox(key, opts, format_func=get_option_label, key=f"home_{category}_{key}")
+                    selections[key] = choice['code']
+                else:
+                    selections[key] = ""
+                    st.warning(f"No options in {key}")
 
     with col2:
         st.subheader("Extras / Add-ons")
         selected_extras_codes = []
-        missing_code_names = [] # To track items with errors
+        missing_code_names = []
 
         if not extras_list:
             st.caption("No extras available.")
@@ -283,7 +380,6 @@ def render_home():
                 if choice != "None":
                     for e in extras_list:
                         if e["name"] == choice:
-                            # --- SAFE CHECK ---
                             code = e.get("code")
                             if code and str(code).strip():
                                 selected_extras_codes.append(str(code))
@@ -295,7 +391,6 @@ def render_home():
                 for i, extra in enumerate(current_page_extras):
                     col = c_ex1 if i % 2 == 0 else c_ex2
                     if col.checkbox(extra["name"], key=f"ex_{category}_{current_idx}_{i}"):
-                        # --- SAFE CHECK ---
                         code = extra.get("code")
                         if code and str(code).strip():
                             selected_extras_codes.append(str(code))
@@ -317,13 +412,25 @@ def render_home():
         st.markdown("---")
         st.subheader("Generated SKU")
         
-        # DISPLAY WARNING IF CODES ARE MISSING
         if missing_code_names:
-            st.error(f"⚠️ **Configuration Error:** The following items have no SKU Code and were ignored: {', '.join(missing_code_names)}. Please update them in Admin Settings.")
+            st.error(f"⚠️ **Configuration Error:** The following items have no SKU Code: {', '.join(missing_code_names)}.")
 
-        base_sku = "".join([str(selections.get(k, "")) for k in sorted_fields])
-        extras_sku = "".join(selected_extras_codes)
-        full_sku = base_sku + extras_sku
+        # JOIN SKU USING THE CATEGORY SEPARATOR
+        # Filter out empty values (unless text input was intentionally left blank, handled by join)
+        parts = [str(selections.get(k, "")) for k in field_keys]
+        # Remove empty strings from parts only if we want to avoid double separators
+        # But for text inputs, empty might mean missing data. We'll stick to joining.
+        base_sku = separator.join(parts)
+        
+        # Append extras. Usually extras are just appended, or separated? 
+        # Standard logic: Append to end. If separator exists, maybe add it?
+        # For hoses (no sep), just append. For Machines (sep), usually separated.
+        extras_sku = "".join(selected_extras_codes) # Extras usually combined
+        
+        if separator and base_sku and extras_sku:
+             full_sku = base_sku + separator + extras_sku
+        else:
+             full_sku = base_sku + extras_sku
         
         st.components.v1.html(copy_to_clipboard_html(full_sku), height=150)
         
@@ -386,7 +493,7 @@ def render_admin():
                 if st.form_submit_button("➕ Add"):
                     if new_cat_name and new_cat_name not in inventory:
                         st.session_state["sku_data"]["inventory"][new_cat_name] = {
-                            "fields": {}, "extras": [], "settings": {"extras_mode": "Multiple"}
+                            "fields": {}, "extras": [], "settings": {"extras_mode": "Multiple", "separator": "-"}
                         }
                         st.success(f"Created {new_cat_name}")
                         st.rerun()
@@ -399,38 +506,86 @@ def render_admin():
             
             with col_conf_main:
                 st.markdown(f"### 1. Configuration Fields")
+                
+                # SEPARATOR SETTING
+                curr_sep = cat_data.get("settings", {}).get("separator", "-")
+                new_sep = st.text_input("SKU Separator (e.g. '-' or leave empty)", value=curr_sep, key=f"sep_{selected_cat}")
+                if new_sep != curr_sep:
+                    if "settings" not in cat_data: cat_data["settings"] = {}
+                    cat_data["settings"]["separator"] = new_sep
+                    # Force update in session state? It's ref passed so should be ok, but let's be safe
+                    st.session_state["sku_data"]["inventory"][selected_cat]["settings"]["separator"] = new_sep
+
                 current_fields = cat_data["fields"]
                 field_list = list(current_fields.keys())
                 
                 with st.form("form_new_field"):
-                    c_f1, c_f2 = st.columns([2, 1])
+                    c_f1, c_f2, c_f3 = st.columns([2, 1, 1])
                     new_field_name = c_f1.text_input("New Field Name", placeholder="e.g. Thread", label_visibility="collapsed")
+                    field_type = c_f3.selectbox("Type", ["Dropdown", "Text Input"], label_visibility="collapsed")
+                    
                     if c_f2.form_submit_button("Add Field"):
                         if new_field_name and new_field_name not in current_fields:
-                            st.session_state["sku_data"]["inventory"][selected_cat]["fields"][new_field_name] = []
+                            # Initialize with a dummy record that defines the type
+                            f_type_code = "text" if field_type == "Text Input" else "select"
+                            if f_type_code == "text":
+                                # Initialize text fields with a marker
+                                st.session_state["sku_data"]["inventory"][selected_cat]["fields"][new_field_name] = [
+                                    {"code": "", "name": "Text Input", "type": "text"}
+                                ]
+                            else:
+                                st.session_state["sku_data"]["inventory"][selected_cat]["fields"][new_field_name] = []
                             st.rerun()
 
                 if field_list:
                     field_to_edit = st.selectbox("Select Field to Edit Options", field_list)
-                    st.markdown(f"**Options for '{field_to_edit}'**")
-                    df = pd.DataFrame(current_fields[field_to_edit])
-                    if 'order' not in df.columns: df['order'] = range(1, len(df)+1)
+                    
+                    # CHECK TYPE
+                    is_text_field = False
+                    if current_fields[field_to_edit] and isinstance(current_fields[field_to_edit][0], dict):
+                         if current_fields[field_to_edit][0].get("type") == "text":
+                             is_text_field = True
+                    
+                    if is_text_field:
+                        st.info(f"Field '{field_to_edit}' is a **Text Input**. No options to configure.")
+                        if st.button("🗑️ Delete Field", key="del_text_field"):
+                             del st.session_state["sku_data"]["inventory"][selected_cat]["fields"][field_to_edit]
+                             st.rerun()
+                    else:
+                        st.markdown(f"**Options for '{field_to_edit}'**")
+                        data_source = current_fields[field_to_edit]
+                        if not data_source:
+                            df = pd.DataFrame(columns=["order", "code", "name"])
+                        else:
+                            df = pd.DataFrame(data_source)
+                        
+                        if 'order' not in df.columns: df['order'] = range(1, len(df)+1)
+                        if 'code' not in df.columns: df['code'] = ""
+                        if 'name' not in df.columns: df['name'] = ""
 
-                    with st.form(key=f"form_fields_{selected_cat}_{field_to_edit}"):
-                        edited_df = st.data_editor(
-                            df,
-                            num_rows="dynamic",
-                            column_config={
-                                "order": st.column_config.NumberColumn("Order", width="small"),
-                                "code": st.column_config.TextColumn("Code"),
-                                "name": st.column_config.TextColumn("Name"),
-                            },
-                            hide_index=True,
-                            use_container_width=True
-                        )
-                        if st.form_submit_button("✅ Update Options"):
-                            st.session_state["sku_data"]["inventory"][selected_cat]["fields"][field_to_edit] = edited_df.to_dict('records')
-                            st.success("Options updated locally. Click 'Save to Cloud' to persist.")
+                        with st.form(key=f"form_fields_{selected_cat}_{field_to_edit}"):
+                            edited_df = st.data_editor(
+                                df,
+                                num_rows="dynamic",
+                                column_config={
+                                    "order": st.column_config.NumberColumn("Sort Order", width="small", default=1),
+                                    "code": st.column_config.TextColumn("SKU Code", required=True),
+                                    "name": st.column_config.TextColumn("Display Name", required=True),
+                                },
+                                hide_index=True,
+                                use_container_width=True
+                            )
+                            c_sub1, c_sub2 = st.columns([1, 4])
+                            if c_sub1.form_submit_button("✅ Update"):
+                                st.session_state["sku_data"]["inventory"][selected_cat]["fields"][field_to_edit] = edited_df.to_dict('records')
+                                st.success("Updated!")
+                            
+                            # Hacky delete button outside form logic usually preferred, but for now:
+                            # User can delete all rows in editor to 'clear', but to delete field itself:
+                        
+                        if st.button("🗑️ Delete Field", key=f"del_field_{field_to_edit}"):
+                             del st.session_state["sku_data"]["inventory"][selected_cat]["fields"][field_to_edit]
+                             st.rerun()
                 else:
                     st.info("No fields created yet.")
 
@@ -447,15 +602,22 @@ def render_admin():
                 st.session_state["sku_data"]["inventory"][selected_cat]["settings"]["extras_mode"] = new_mode
 
                 extras_data = cat_data.get("extras", [])
-                df_extras = pd.DataFrame(extras_data)
+                
+                if not extras_data:
+                    df_extras = pd.DataFrame(columns=["name", "code", "selected"])
+                else:
+                    df_extras = pd.DataFrame(extras_data)
+                
+                if 'name' not in df_extras.columns: df_extras['name'] = ""
+                if 'code' not in df_extras.columns: df_extras['code'] = ""
                 
                 with st.form(key=f"form_extras_{selected_cat}"):
                     edited_extras = st.data_editor(
                         df_extras,
                         num_rows="dynamic",
                         column_config={
-                            "name": st.column_config.TextColumn("Extra Name"),
-                            "code": st.column_config.TextColumn("Code"),
+                            "name": st.column_config.TextColumn("Extra Name", required=True),
+                            "code": st.column_config.TextColumn("Code", required=True),
                             "selected": None 
                         },
                         hide_index=True,
@@ -463,7 +625,7 @@ def render_admin():
                     )
                     if st.form_submit_button("✅ Update Extras"):
                         st.session_state["sku_data"]["inventory"][selected_cat]["extras"] = edited_extras.to_dict('records')
-                        st.success("Extras updated locally. Click 'Save to Cloud' to persist.")
+                        st.success("Extras updated! Click 'Save to Cloud' to persist.")
 
     with tab2:
         st.subheader("Backup & Matrix Export")
