@@ -40,6 +40,11 @@
           "name": "Test",
           "code": "T",
           "selected": null
+        },
+        {
+          "name": "Test 2",
+          "code": null,
+          "selected": null
         }
       ]
     }
