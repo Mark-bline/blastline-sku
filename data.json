@@ -1,0 +1,42 @@
+{
+  "inventory": {
+    "Blast Machine": {
+      "settings": {
+        "extras_mode": "Multiple"
+      },
+      "fields": {
+        "Brand": [
+          {
+            "code": "BL",
+            "name": "Blastline",
+            "order": 1
+          },
+          {
+            "code": "NB",
+            "name": "New Blast",
+            "order": null
+          }
+        ],
+        "Capacity": [
+          {
+            "code": "20",
+            "name": "1080",
+            "order": 1
+          }
+        ]
+      },
+      "extras": [
+        {
+          "name": "Remote Control",
+          "code": "R",
+          "selected": false
+        },
+        {
+          "name": "Deadman Handle",
+          "code": null,
+          "selected": null
+        }
+      ]
+    }
+  }
+}
