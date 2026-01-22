@@ -144,7 +144,6 @@ def copy_to_clipboard_html(text):
     </script>
     """
 
-# Helper to safely convert order to int for sorting
 def safe_int_sort(x):
     try:
         return int(x.get('order', 99))
@@ -177,14 +176,19 @@ def generate_full_matrix_df():
         if mode == "Single":
             extras_combinations.append({"code": "", "name": "None"})
             for ex in extras_list:
-                extras_combinations.append({"code": ex["code"], "name": ex["name"]})
+                # SAFE CHECK for extras in matrix
+                code = ex.get("code")
+                if code and str(code).strip():
+                    extras_combinations.append({"code": str(code), "name": ex["name"]})
         else:
-            for r in range(len(extras_list) + 1):
-                for combo in itertools.combinations(extras_list, r):
+            # Filter out invalid extras first
+            valid_extras = [e for e in extras_list if e.get("code") and str(e.get("code")).strip()]
+            for r in range(len(valid_extras) + 1):
+                for combo in itertools.combinations(valid_extras, r):
                     if not combo:
                         extras_combinations.append({"code": "", "name": "None"})
                     else:
-                        c_code = "".join([i["code"] for i in combo])
+                        c_code = "".join([str(i["code"]) for i in combo])
                         c_name = " | ".join([i["name"] for i in combo])
                         extras_combinations.append({"code": c_code, "name": c_name})
         
@@ -221,10 +225,7 @@ def render_home():
         st.warning("No Categories Configured.")
         return
 
-    # Create columns to control the width (e.g., use half the screen width)
-    c1, c2 = st.columns([1, 1]) 
-    with c1:
-        category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
+    category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
     
     cat_data = inventory.get(category, {})
     fields_dict = cat_data.get("fields", {})
@@ -245,13 +246,9 @@ def render_home():
             
         for key in sorted_fields:
             opts = fields_dict[key]
-            
-            # --- SAFE SORTING APPLIED ---
             try:
                 opts = sorted(opts, key=safe_int_sort)
-            except Exception:
-                pass # Use unsorted if catastrophic failure
-            # ----------------------------
+            except Exception: pass
             
             if opts:
                 choice = st.selectbox(key, opts, format_func=get_option_label, key=f"home_{category}_{key}")
@@ -263,6 +260,7 @@ def render_home():
     with col2:
         st.subheader("Extras / Add-ons")
         selected_extras_codes = []
+        missing_code_names = [] # To track items with errors
 
         if not extras_list:
             st.caption("No extras available.")
@@ -285,14 +283,24 @@ def render_home():
                 if choice != "None":
                     for e in extras_list:
                         if e["name"] == choice:
-                            selected_extras_codes.append(e["code"])
+                            # --- SAFE CHECK ---
+                            code = e.get("code")
+                            if code and str(code).strip():
+                                selected_extras_codes.append(str(code))
+                            else:
+                                missing_code_names.append(e["name"])
                             break
             else:
                 c_ex1, c_ex2 = st.columns(2)
                 for i, extra in enumerate(current_page_extras):
                     col = c_ex1 if i % 2 == 0 else c_ex2
                     if col.checkbox(extra["name"], key=f"ex_{category}_{current_idx}_{i}"):
-                        selected_extras_codes.append(extra["code"])
+                        # --- SAFE CHECK ---
+                        code = extra.get("code")
+                        if code and str(code).strip():
+                            selected_extras_codes.append(str(code))
+                        else:
+                            missing_code_names.append(extra["name"])
 
             if total_pages > 1:
                 st.markdown("---")
@@ -309,7 +317,11 @@ def render_home():
         st.markdown("---")
         st.subheader("Generated SKU")
         
-        base_sku = "".join([selections.get(k, "") for k in sorted_fields])
+        # DISPLAY WARNING IF CODES ARE MISSING
+        if missing_code_names:
+            st.error(f"⚠️ **Configuration Error:** The following items have no SKU Code and were ignored: {', '.join(missing_code_names)}. Please update them in Admin Settings.")
+
+        base_sku = "".join([str(selections.get(k, "")) for k in sorted_fields])
         extras_sku = "".join(selected_extras_codes)
         full_sku = base_sku + extras_sku
         
@@ -484,4 +496,3 @@ elif st.session_state["current_page"] == "login":
     render_login()
 elif st.session_state["current_page"] == "admin":
     render_admin()
-
