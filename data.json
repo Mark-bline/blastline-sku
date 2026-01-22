@@ -1,97 +1,436 @@
 {
   "inventory": {
-    "Blast Machine": {
+    "Hose-Helmet Breathing Air": {
       "settings": {
-        "extras_mode": "Single"
+        "extras_mode": "Single",
+        "separator": ""
       },
       "fields": {
-        "Brand": [
+        "Type": [
           {
-            "code": "BL",
-            "name": "Blastline",
-            "order": 1.0
-          },
-          {
-            "code": "NB",
-            "name": "New Blast",
-            "order": 2.0
+            "code": "H",
+            "name": "Helmet Breathing Air",
+            "order": 1
           }
         ],
-        "Capacity": [
+        "Material / Config": [
+          {
+            "code": "NBR/PVC",
+            "name": "NBR/PVC",
+            "order": 1
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "06",
+            "name": "3/8",
+            "order": 1
+          }
+        ],
+        "Length / Variant": [
+          {
+            "code": "020",
+            "name": "20",
+            "order": 1
+          },
+          {
+            "code": "040",
+            "name": "40",
+            "order": 2
+          },
+          {
+            "code": "100",
+            "name": "100",
+            "order": 3
+          }
+        ],
+        "Pressure / Spec": [
           {
             "code": "20",
-            "name": "20 LTR Blast Machine",
+            "name": "20Bar/300Psi",
+            "order": 1
+          }
+        ]
+      },
+      "extras": []
+    },
+    "Hose-Twinline": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "H",
+            "name": "Twinline",
+            "order": 1
+          }
+        ],
+        "Material / Config": [
+          {
+            "code": "NBR/PVC",
+            "name": "NBR/PVC",
+            "order": 1
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "04",
+            "name": "1/4",
+            "order": 1
+          }
+        ],
+        "Length / Variant": [
+          {
+            "code": "020",
+            "name": "20",
+            "order": 1
+          },
+          {
+            "code": "040",
+            "name": "40",
+            "order": 2
+          },
+          {
+            "code": "100",
+            "name": "100",
+            "order": 3
+          }
+        ],
+        "Pressure / Spec": [
+          {
+            "code": "20",
+            "name": "20Bar/300Psi",
+            "order": 1
+          }
+        ]
+      },
+      "extras": []
+    },
+    "Couplings": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "C",
+            "name": "Chicago/Crowfoot",
+            "order": 1
+          }
+        ],
+        "Material / Config": [
+          {
+            "code": "2L",
+            "name": "2L",
+            "order": 1
+          },
+          {
+            "code": "4L",
+            "name": "4L",
+            "order": 2
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "06",
+            "name": "3/8",
+            "order": 1
+          },
+          {
+            "code": "08",
+            "name": "1/2",
+            "order": 2
+          },
+          {
+            "code": "12",
+            "name": "3/4",
+            "order": 3
+          },
+          {
+            "code": "16",
+            "name": "1",
+            "order": 4
+          },
+          {
+            "code": "20",
+            "name": "1-1/4",
+            "order": 5
+          },
+          {
+            "code": "24",
+            "name": "1-1/2",
+            "order": 6
+          },
+          {
+            "code": "32",
+            "name": "2",
+            "order": 7
+          }
+        ]
+      },
+      "extras": []
+    },
+    "Clamps": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "D",
+            "name": "Clamp",
+            "order": 1
+          }
+        ],
+        "Material / Config": [
+          {
+            "code": "2B",
+            "name": "2B",
+            "order": 1
+          },
+          {
+            "code": "4B",
+            "name": "4B",
+            "order": 2
+          },
+          {
+            "code": "2BS",
+            "name": "2BS",
+            "order": 3
+          },
+          {
+            "code": "4BS",
+            "name": "4BS",
+            "order": 4
+          },
+          {
+            "code": "CC",
+            "name": "CC",
+            "order": 5
+          },
+          {
+            "code": "JC",
+            "name": "JC",
+            "order": 6
+          },
+          {
+            "code": "OC",
+            "name": "OC",
+            "order": 7
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "04",
+            "name": "1/4",
+            "order": 1
+          },
+          {
+            "code": "06",
+            "name": "3/8",
+            "order": 2
+          },
+          {
+            "code": "08",
+            "name": "1/2",
+            "order": 3
+          },
+          {
+            "code": "12",
+            "name": "3/4",
+            "order": 4
+          },
+          {
+            "code": "16",
+            "name": "1",
+            "order": 5
+          },
+          {
+            "code": "20",
+            "name": "1-1/4",
+            "order": 6
+          },
+          {
+            "code": "24",
+            "name": "1-1/2",
+            "order": 7
+          },
+          {
+            "code": "32",
+            "name": "2",
+            "order": 8
+          }
+        ]
+      },
+      "extras": []
+    },
+    "Blast Machine": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "BL",
+            "name": "Blast Machine",
+            "order": 1
+          }
+        ],
+        "Material / Config": [
+          {
+            "code": "M",
+            "name": "M",
+            "order": 1
+          },
+          {
+            "code": "C",
+            "name": "C",
+            "order": 2
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "20",
+            "name": "1080",
             "order": 1
           },
           {
             "code": "30",
-            "name": "30 LTR Blast Machine",
-            "order": null
+            "name": "1090",
+            "order": 2
           },
           {
             "code": "50",
-            "name": "50 LTR Blast Machine",
-            "order": null
+            "name": "14160",
+            "order": 3
           },
           {
             "code": "100",
-            "name": "100 LTR Blast Machine",
-            "order": null
+            "name": "20300",
+            "order": 4
           },
           {
             "code": "200",
-            "name": "200 LTR Blast Machine",
-            "order": null
+            "name": "24650",
+            "order": 5
           },
           {
             "code": "300",
-            "name": "300 LTR Blast Machine",
-            "order": null
+            "name": "24800",
+            "order": 6
+          }
+        ],
+        "Pressure / Spec": [
+          {
+            "code": "S",
+            "name": "S",
+            "order": 1
           },
           {
-            "code": "500",
-            "name": "500 LTR Blast Machine",
-            "order": null
+            "code": "ST",
+            "name": "ST",
+            "order": 2
           },
           {
-            "code": "J10",
-            "name": "1000 LTR Jumbo Blaster",
-            "order": null
+            "code": "P",
+            "name": "P",
+            "order": 3
           },
           {
-            "code": "J20",
-            "name": "2000 LTR Jumbo Blaster",
-            "order": null
-          },
-          {
-            "code": "J30",
-            "name": "3000 LTR Jumbo Blaster",
-            "order": null
+            "code": "U",
+            "name": "U",
+            "order": 4
           }
         ]
       },
-      "extras": [
-        {
-          "name": "Remote Control Valve",
-          "code": "R",
-          "selected": false
-        },
-        {
-          "name": "Deadman Handle",
-          "code": "D",
-          "selected": null
-        },
-        {
-          "name": "Blast Hose",
-          "code": "B",
-          "selected": null
-        },
-        {
-          "name": "Twin Hose",
-          "code": null,
-          "selected": null
-        }
-      ]
+      "extras": []
+    },
+    "Air Receiver": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "AR",
+            "name": "Air Receiver",
+            "order": 1
+          }
+        ],
+        "Size / Capacity": [
+          {
+            "code": "100",
+            "name": "100",
+            "order": 1
+          },
+          {
+            "code": "200",
+            "name": "200",
+            "order": 2
+          },
+          {
+            "code": "500",
+            "name": "500",
+            "order": 3
+          },
+          {
+            "code": "1000",
+            "name": "1000",
+            "order": 4
+          },
+          {
+            "code": "2000",
+            "name": "2000",
+            "order": 5
+          }
+        ]
+      },
+      "extras": []
+    },
+    "Traded Product": {
+      "settings": {
+        "extras_mode": "Single",
+        "separator": ""
+      },
+      "fields": {
+        "Type": [
+          {
+            "code": "PG",
+            "name": "Graco",
+            "order": 1
+          },
+          {
+            "code": "PD",
+            "name": "Spraymaster",
+            "order": 2
+          },
+          {
+            "code": "MP",
+            "name": "Monti Power",
+            "order": 3
+          },
+          {
+            "code": "TP",
+            "name": "Positector",
+            "order": 4
+          }
+        ],
+        "Part Number": [
+          {
+            "code": "",
+            "name": "Enter Part No.",
+            "order": 1,
+            "type": "text"
+          }
+        ]
+      },
+      "extras": []
     }
   }
 }
