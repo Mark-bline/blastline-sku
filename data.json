@@ -9,12 +9,12 @@
           {
             "code": "BL",
             "name": "Blastline",
-            "order": 1
+            "order": 1.0
           },
           {
             "code": "NB",
             "name": "New Blast",
-            "order": null
+            "order": 2.0
           }
         ],
         "Capacity": [
@@ -33,7 +33,12 @@
         },
         {
           "name": "Deadman Handle",
-          "code": null,
+          "code": "D",
+          "selected": null
+        },
+        {
+          "name": "Test",
+          "code": "T",
           "selected": null
         }
       ]
