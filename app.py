@@ -241,7 +241,7 @@ def render_home():
             
         for key in sorted_fields:
             opts = fields_dict[key]
-            opts = sorted(opts, key=lambda x: x.get('order', 99))
+            opts = sorted(opts, key=lambda x: int(x.get('order', 99)))
             if opts:
                 choice = st.selectbox(key, opts, format_func=get_option_label, key=f"home_{category}_{key}")
                 selections[key] = choice['code']
@@ -474,3 +474,4 @@ elif st.session_state["current_page"] == "login":
     render_login()
 elif st.session_state["current_page"] == "admin":
     render_admin()
+
