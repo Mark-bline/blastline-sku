@@ -2,7 +2,7 @@
   "inventory": {
     "Blast Machine": {
       "settings": {
-        "extras_mode": "Multiple"
+        "extras_mode": "Single"
       },
       "fields": {
         "Brand": [
