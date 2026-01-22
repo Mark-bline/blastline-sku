@@ -3,54 +3,106 @@ import pandas as pd
 import json
 import itertools
 import math
+import requests
+import base64
 
 # ==========================================
-# 1. SETUP & DATA INITIALIZATION
+# 1. SETUP & GITHUB INTEGRATION
 # ==========================================
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
-# INITIALIZE DATA STRUCTURE
+# --- GITHUB STORAGE HANDLER ---
+class GithubStorage:
+    def __init__(self):
+        # Check if secrets are set up
+        if "github" in st.secrets:
+            self.token = st.secrets["github"]["token"]
+            self.owner = st.secrets["github"]["owner"]
+            self.repo = st.secrets["github"]["repo"]
+            self.branch = st.secrets["github"]["branch"]
+            self.path = st.secrets["github"]["filepath"]
+            self.api_url = f"https://api.github.com/repos/{self.owner}/{self.repo}/contents/{self.path}"
+            self.headers = {"Authorization": f"token {self.token}"}
+            self.can_connect = True
+        else:
+            self.can_connect = False
+
+    def load_data(self):
+        """Loads JSON from GitHub. Returns None if file doesn't exist yet."""
+        if not self.can_connect: return None
+        
+        try:
+            r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
+            if r.status_code == 200:
+                content = r.json()
+                # Store SHA to allow updating later
+                st.session_state["github_sha"] = content["sha"]
+                # Decode Base64 content
+                file_content = base64.b64decode(content["content"]).decode("utf-8")
+                return json.loads(file_content)
+        except Exception as e:
+            st.error(f"Error loading from GitHub: {e}")
+        return None
+
+    def save_data(self, data):
+        """Updates the file on GitHub."""
+        if not self.can_connect:
+            st.error("GitHub secrets not configured!")
+            return False
+            
+        try:
+            json_str = json.dumps(data, indent=2)
+            content_b64 = base64.b64encode(json_str.encode("utf-8")).decode("utf-8")
+            
+            payload = {
+                "message": "Update SKU Config (Streamlit App)",
+                "content": content_b64,
+                "branch": self.branch
+            }
+            
+            # If we loaded the file previously, we must include the SHA to update it
+            if "github_sha" in st.session_state:
+                payload["sha"] = st.session_state["github_sha"]
+                
+            r = requests.put(self.api_url, headers=self.headers, json=payload)
+            
+            if r.status_code in [200, 201]:
+                # Update the new SHA so subsequent saves work
+                st.session_state["github_sha"] = r.json()["content"]["sha"]
+                return True
+            else:
+                st.error(f"GitHub Save Failed: {r.status_code} - {r.text}")
+                return False
+        except Exception as e:
+            st.error(f"Error saving to GitHub: {e}")
+            return False
+
+# --- INITIALIZE DATA ---
 if "sku_data" not in st.session_state:
-    st.session_state["sku_data"] = {
-        "inventory": {
-            "Blast Machine": {
-                "settings": {"extras_mode": "Multiple"},
-                "fields": {
-                    "Brand": [
-                        {"code": "BL", "name": "Blastline", "order": 1},
-                        {"code": "CL", "name": "Clemco", "order": 2}
-                    ],
-                    "Capacity": [
-                        {"code": "20", "name": "1080", "order": 1},
-                        {"code": "24", "name": "1440", "order": 2}
-                    ],
-                    "Configuration": [
-                        {"code": "C", "name": "Contractor", "order": 1},
-                        {"code": "S", "name": "Standard", "order": 2}
-                    ],
-                    "Certification": [
-                        {"code": "ST", "name": "Standard 3rd Party", "order": 1},
-                        {"code": "CE", "name": "CE Certified", "order": 2}
-                    ],
-                    "Valve": [
-                        {"code": "F", "name": "Flat Sand", "order": 1},
-                        {"code": "T", "name": "Thompson", "order": 2}
-                    ],
-                    "Screen / Cover": [
-                        {"code": "1", "name": "Screen + Cover", "order": 1},
-                        {"code": "0", "name": "None", "order": 2}
+    gh = GithubStorage()
+    
+    # 1. Try loading from GitHub
+    remote_data = gh.load_data()
+    
+    if remote_data:
+        st.session_state["sku_data"] = remote_data
+        st.toast("Data loaded from GitHub!", icon="☁️")
+    else:
+        # 2. Fallback to Default (First Run)
+        st.session_state["sku_data"] = {
+            "inventory": {
+                "Blast Machine": {
+                    "settings": {"extras_mode": "Multiple"},
+                    "fields": {
+                        "Brand": [{"code": "BL", "name": "Blastline", "order": 1}],
+                        "Capacity": [{"code": "20", "name": "1080", "order": 1}]
+                    },
+                    "extras": [
+                        {"name": "Remote Control", "code": "R", "selected": False}
                     ]
-                },
-                "extras": [
-                    {"name": "Remote Control", "code": "R", "selected": False},
-                    {"name": "Water Separator", "code": "W", "selected": False},
-                    {"name": "Silence Kit", "code": "S", "selected": False},
-                    {"name": "Cover", "code": "C", "selected": False},
-                    {"name": "Screen", "code": "Sc", "selected": False}
-                ]
+                }
             }
         }
-    }
 
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = "home"
@@ -109,7 +161,6 @@ def generate_full_matrix_df():
         
         if not fields_dict and not extras_list: continue
         
-        # 1. Core Combinations
         core_lists = []
         field_keys = list(fields_dict.keys())
         priority = ["Brand", "Capacity", "Configuration", "Certification", "Valve", "Screen / Cover"]
@@ -118,12 +169,9 @@ def generate_full_matrix_df():
         for key in sorted_keys:
             core_lists.append(fields_dict[key])
             
-        if not core_lists:
-            core_combinations = [([],)]
-        else:
-            core_combinations = list(itertools.product(*core_lists))
+        if not core_lists: core_combinations = [([],)]
+        else: core_combinations = list(itertools.product(*core_lists))
 
-        # 2. Extras Combinations
         extras_combinations = []
         if mode == "Single":
             extras_combinations.append({"code": "", "name": "None"})
@@ -139,7 +187,6 @@ def generate_full_matrix_df():
                         c_name = " | ".join([i["name"] for i in combo])
                         extras_combinations.append({"code": c_code, "name": c_name})
         
-        # 3. Combine
         for core in core_combinations:
             base_sku = "".join([item["code"] for item in core]) if core and core[0] else ""
             base_desc = " | ".join([item["name"] for item in core]) if core and core[0] else ""
@@ -149,12 +196,7 @@ def generate_full_matrix_df():
                 separator = " | " if base_desc and extra["name"] != "None" else ""
                 extra_desc = extra["name"] if extra["name"] != "None" else ""
                 full_desc = f"{base_desc}{separator}{extra_desc}"
-                
-                rows.append({
-                    "Category": cat_name,
-                    "Generated SKU": full_sku,
-                    "Full Description": full_desc
-                })
+                rows.append({"Category": cat_name, "Generated SKU": full_sku, "Full Description": full_desc})
             
     return pd.DataFrame(rows)
 
@@ -168,7 +210,7 @@ def render_home():
             navigate_to("login")
 
     st.title("Blastline SKU Configurator")
-    st.caption("Database: Factory Default")
+    st.caption("Database: Factory Default" if "github" not in st.secrets else "Database: GitHub (Cloud)")
     st.markdown("---")
 
     inventory = st.session_state["sku_data"]["inventory"]
@@ -214,7 +256,6 @@ def render_home():
         if not extras_list:
             st.caption("No extras available.")
         else:
-            # PAGINATION LOGIC
             ITEMS_PER_PAGE = 12
             total_items = len(extras_list)
             total_pages = math.ceil(total_items / ITEMS_PER_PAGE)
@@ -298,13 +339,17 @@ def render_admin():
     st.title("⚙️ Admin Settings")
     c1, c2 = st.columns([6,1])
     with c2:
-        if st.button("💾 Save & Exit", type="primary"):
-            st.toast("Configuration Saved!")
-            navigate_to("home")
+        # UPDATED: SAVE TO GITHUB BUTTON
+        if st.button("☁️ Save to Cloud", type="primary", help="Saves data permanently to GitHub"):
+            gh = GithubStorage()
+            if gh.save_data(st.session_state["sku_data"]):
+                st.toast("Saved successfully to GitHub!", icon="✅")
+                navigate_to("home")
+            else:
+                st.toast("Save failed! Check settings.", icon="❌")
 
     tab1, tab2 = st.tabs(["🛠️ Configuration", "💾 Data I/O"])
 
-    # --- TAB 1: MASTER CONFIGURATION ---
     with tab1:
         st.info("Select a Category to configure its Fields and Extras.")
         inventory = st.session_state["sku_data"]["inventory"]
@@ -312,19 +357,14 @@ def render_admin():
         
         col_cat1, col_cat2 = st.columns([3, 1])
         with col_cat1:
-            # SELECTBOX (Navigation) - Stays OUTSIDE form
             selected_cat = st.selectbox("Product Category", cat_list, key="admin_cat_select")
-        
         with col_cat2:
-            # FORM 1: CREATE NEW CATEGORY
             with st.form("form_new_category"):
                 new_cat_name = st.text_input("Create New Category", placeholder="Name...", label_visibility="collapsed")
                 if st.form_submit_button("➕ Add"):
                     if new_cat_name and new_cat_name not in inventory:
                         st.session_state["sku_data"]["inventory"][new_cat_name] = {
-                            "fields": {}, 
-                            "extras": [], 
-                            "settings": {"extras_mode": "Multiple"}
+                            "fields": {}, "extras": [], "settings": {"extras_mode": "Multiple"}
                         }
                         st.success(f"Created {new_cat_name}")
                         st.rerun()
@@ -335,31 +375,25 @@ def render_admin():
             cat_data = inventory[selected_cat]
             col_conf_main, col_conf_extras = st.columns([1, 1], gap="large")
             
-            # --- COLUMN 1: CONFIG FIELDS ---
             with col_conf_main:
                 st.markdown(f"### 1. Configuration Fields")
                 current_fields = cat_data["fields"]
                 field_list = list(current_fields.keys())
                 
-                # FORM 2: CREATE NEW FIELD
                 with st.form("form_new_field"):
                     c_f1, c_f2 = st.columns([2, 1])
                     new_field_name = c_f1.text_input("New Field Name", placeholder="e.g. Thread", label_visibility="collapsed")
-                    # Button inside form
                     if c_f2.form_submit_button("Add Field"):
                         if new_field_name and new_field_name not in current_fields:
                             st.session_state["sku_data"]["inventory"][selected_cat]["fields"][new_field_name] = []
                             st.rerun()
 
                 if field_list:
-                    # SELECTBOX (Navigation) - Stays OUTSIDE form
                     field_to_edit = st.selectbox("Select Field to Edit Options", field_list)
                     st.markdown(f"**Options for '{field_to_edit}'**")
-                    
                     df = pd.DataFrame(current_fields[field_to_edit])
                     if 'order' not in df.columns: df['order'] = range(1, len(df)+1)
 
-                    # FORM 3: DATA EDITOR (OPTIONS)
                     with st.form(key=f"form_fields_{selected_cat}_{field_to_edit}"):
                         edited_df = st.data_editor(
                             df,
@@ -374,22 +408,18 @@ def render_admin():
                         )
                         if st.form_submit_button("✅ Update Options"):
                             st.session_state["sku_data"]["inventory"][selected_cat]["fields"][field_to_edit] = edited_df.to_dict('records')
-                            st.success("Options updated!")
+                            st.success("Options updated locally. Click 'Save to Cloud' to persist.")
                 else:
                     st.info("No fields created yet.")
 
-            # --- COLUMN 2: EXTRAS ---
             with col_conf_extras:
                 st.markdown(f"### 2. Extras & Add-ons")
-                
-                # Logic Mode (Radio is simple enough, can stay outside or inside. Outside feels faster for toggles)
                 curr_mode = cat_data.get("settings", {}).get("extras_mode", "Multiple")
                 new_mode = st.radio("Selection Logic", ["Single", "Multiple"], 
                                    index=0 if curr_mode=="Single" else 1, 
                                    horizontal=True,
                                    key=f"mode_{selected_cat}")
                 
-                # Update mode in state
                 if "settings" not in st.session_state["sku_data"]["inventory"][selected_cat]:
                     st.session_state["sku_data"]["inventory"][selected_cat]["settings"] = {}
                 st.session_state["sku_data"]["inventory"][selected_cat]["settings"]["extras_mode"] = new_mode
@@ -397,7 +427,6 @@ def render_admin():
                 extras_data = cat_data.get("extras", [])
                 df_extras = pd.DataFrame(extras_data)
                 
-                # FORM 4: DATA EDITOR (EXTRAS)
                 with st.form(key=f"form_extras_{selected_cat}"):
                     edited_extras = st.data_editor(
                         df_extras,
@@ -412,19 +441,15 @@ def render_admin():
                     )
                     if st.form_submit_button("✅ Update Extras"):
                         st.session_state["sku_data"]["inventory"][selected_cat]["extras"] = edited_extras.to_dict('records')
-                        st.success("Extras updated!")
+                        st.success("Extras updated locally. Click 'Save to Cloud' to persist.")
 
-    # --- TAB 2: DATA I/O ---
     with tab2:
         st.subheader("Backup & Matrix Export")
         col_exp, col_imp = st.columns(2)
-        
         with col_exp:
             st.markdown("#### 📤 Export")
             json_str = json.dumps(st.session_state["sku_data"], indent=2)
             st.download_button("Download Config (JSON)", json_str, "blastline_config.json", "application/json")
-            
-            st.markdown("---")
             if st.button("Generate Full Matrix CSV"):
                 with st.spinner("Processing..."):
                     df_matrix = generate_full_matrix_df()
@@ -439,13 +464,10 @@ def render_admin():
                 try:
                     data = json.load(uploaded_file)
                     st.session_state["sku_data"] = data
-                    st.success("Restored! Save & Exit.")
+                    st.success("Loaded! Click 'Save to Cloud' to persist.")
                 except:
                     st.error("Invalid File")
 
-# ==========================================
-# 6. ROUTER
-# ==========================================
 if st.session_state["current_page"] == "home":
     render_home()
 elif st.session_state["current_page"] == "login":
