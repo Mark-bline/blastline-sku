@@ -221,7 +221,10 @@ def render_home():
         st.warning("No Categories Configured.")
         return
 
-    category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
+    # Create columns to control the width (e.g., use half the screen width)
+    c1, c2 = st.columns([1, 1]) 
+    with c1:
+        category = st.selectbox("Product Category", available_cats, on_change=reset_pagination)
     
     cat_data = inventory.get(category, {})
     fields_dict = cat_data.get("fields", {})
@@ -481,3 +484,4 @@ elif st.session_state["current_page"] == "login":
     render_login()
 elif st.session_state["current_page"] == "admin":
     render_admin()
+
