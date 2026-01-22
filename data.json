@@ -20,14 +20,59 @@
         "Capacity": [
           {
             "code": "20",
-            "name": "1080",
+            "name": "20 LTR Blast Machine",
             "order": 1
+          },
+          {
+            "code": "30",
+            "name": "30 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "50",
+            "name": "50 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "100",
+            "name": "100 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "200",
+            "name": "200 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "300",
+            "name": "300 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "500",
+            "name": "500 LTR Blast Machine",
+            "order": null
+          },
+          {
+            "code": "J10",
+            "name": "1000 LTR Jumbo Blaster",
+            "order": null
+          },
+          {
+            "code": "J20",
+            "name": "2000 LTR Jumbo Blaster",
+            "order": null
+          },
+          {
+            "code": "J30",
+            "name": "3000 LTR Jumbo Blaster",
+            "order": null
           }
         ]
       },
       "extras": [
         {
-          "name": "Remote Control",
+          "name": "Remote Control Valve",
           "code": "R",
           "selected": false
         },
@@ -37,12 +82,12 @@
           "selected": null
         },
         {
-          "name": "Test",
-          "code": "T",
+          "name": "Blast Hose",
+          "code": "B",
           "selected": null
         },
         {
-          "name": "Test 2",
+          "name": "Twin Hose",
           "code": null,
           "selected": null
         }
