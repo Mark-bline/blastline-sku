@@ -301,8 +301,8 @@ def home():
                         st.rerun()
             
             # Show extras for current page
-            for e in extras[start_idx:end_idx]:
-                if st.checkbox(e["name"], help=f"Add {e['name']} to SKU"):
+            for idx, e in enumerate(extras[start_idx:end_idx], start=start_idx):
+                if st.checkbox(e["name"], key=f"extra_{idx}", help=f"Add {e['name']} to SKU"):
                     if e.get("code"):
                         chosen.append(e["code"])
         else:
