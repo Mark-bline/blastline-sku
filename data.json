@@ -23,7 +23,18 @@
         },
         "Capacity": {
           "order": 2,
-          "options": []
+          "options": [
+            {
+              "code": "20",
+              "name": "20 LTR",
+              "order": 2
+            },
+            {
+              "code": "30",
+              "name": "30 LTR",
+              "order": 3
+            }
+          ]
         },
         "Configuration": {
           "order": 3,
