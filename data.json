@@ -27,11 +27,16 @@
             {
               "code": "20",
               "name": "20 LTR",
-              "order": 2
+              "order": 1
             },
             {
               "code": "30",
               "name": "30 LTR",
+              "order": 2
+            },
+            {
+              "code": "50",
+              "name": "50 LTR",
               "order": 3
             }
           ]
