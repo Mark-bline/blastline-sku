@@ -120,12 +120,14 @@ def normalize_extras_df(data):
         data: List of extra dictionaries
         
     Returns:
-        DataFrame with code and name columns
+        DataFrame with code, name, and order columns
     """
-    df = pd.DataFrame(data or [], columns=["code", "name"])
+    df = pd.DataFrame(data or [], columns=["code", "name", "order"])
     if df.empty:
-        df = pd.DataFrame(columns=["code", "name"])
-    return df[["code", "name"]]
+        df = pd.DataFrame(columns=["code", "name", "order"])
+    if "order" not in df.columns or df["order"].isnull().all():
+        df["order"] = range(1, len(df) + 1)
+    return df[["code", "name", "order"]]
 
 def generate_full_matrix(cat_data):
     """
@@ -243,6 +245,13 @@ def home():
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
         st.warning("No categories available. Please contact admin to set up product categories.")
+        st.markdown("---")
+        st.markdown(
+            "<div style='text-align:center;color:#888;padding:20px;font-size:0.9em'>"
+            "This application is developed by <strong>Blastline India Pvt Ltd</strong>."
+            "</div>",
+            unsafe_allow_html=True
+        )
         return
 
     cat = st.selectbox("Product Category", list(inv.keys()))
@@ -273,8 +282,11 @@ def home():
         chosen = []
         
         if extras:
+            # Sort extras by order before displaying
+            sorted_extras = sorted(extras, key=lambda x: x.get("order", 999))
+            
             # Calculate pagination
-            total_extras = len(extras)
+            total_extras = len(sorted_extras)
             total_pages = (total_extras - 1) // EXTRAS_PER_PAGE + 1 if total_extras > 0 else 1
             current_page = st.session_state.get("extras_page", 0)
             
@@ -300,11 +312,32 @@ def home():
                         st.session_state["extras_page"] = current_page + 1
                         st.rerun()
             
-            # Show extras for current page
-            for idx, e in enumerate(extras[start_idx:end_idx], start=start_idx):
-                if st.checkbox(e["name"], key=f"extra_{idx}", help=f"Add {e['name']} to SKU"):
-                    if e.get("code"):
-                        chosen.append(e["code"])
+            # Show extras in 2 columns (6x2 grid)
+            page_extras = sorted_extras[start_idx:end_idx]
+            
+            # Create 6 rows with 2 columns each
+            for row in range(6):
+                col1, col2 = st.columns(2)
+                
+                # Left column item
+                left_idx = row
+                if left_idx < len(page_extras):
+                    with col1:
+                        e = page_extras[left_idx]
+                        actual_idx = start_idx + left_idx
+                        if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                            if e.get("code"):
+                                chosen.append(e["code"])
+                
+                # Right column item
+                right_idx = row + 6
+                if right_idx < len(page_extras):
+                    with col2:
+                        e = page_extras[right_idx]
+                        actual_idx = start_idx + right_idx
+                        if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                            if e.get("code"):
+                                chosen.append(e["code"])
         else:
             st.info("No extras configured for this category")
 
@@ -329,6 +362,15 @@ def home():
                             st.write(f"- {e['name']}: `{e['code']}`")
         else:
             st.info("Select options to generate SKU")
+    
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        "<div style='text-align:center;color:#888;padding:20px;font-size:0.9em'>"
+        "This application is developed by <strong>Blastline India Pvt Ltd</strong>."
+        "</div>",
+        unsafe_allow_html=True
+    )
 
 # ==================================================
 # LOGIN
@@ -481,7 +523,7 @@ def admin():
         extras = cat_data.get("extras", [])
         
         st.subheader("🎁 Manage Extras / Add-ons")
-        st.info(f"Extras will be displayed {EXTRAS_PER_PAGE} at a time in the configurator with pagination controls.")
+        st.info(f"Extras will be displayed in a 6×2 grid (12 per page) in the configurator with pagination controls.")
         
         extras_df = normalize_extras_df(extras)
         edited_extras = st.data_editor(
@@ -491,7 +533,8 @@ def admin():
             use_container_width=True,
             column_config={
                 "code": st.column_config.TextColumn("Code", help="SKU code for this extra (will be appended to SKU)"),
-                "name": st.column_config.TextColumn("Name", help="Display name shown to users")
+                "name": st.column_config.TextColumn("Name", help="Display name shown to users"),
+                "order": st.column_config.NumberColumn("Order", help="Display order (lower numbers appear first)")
             }
         )
         
@@ -506,6 +549,7 @@ def admin():
             st.write(f"**Total Extras:** {len(extras)}")
             total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
             st.write(f"**Pages in Configurator:** {total_pages}")
+            st.write(f"**Layout:** 6 rows × 2 columns per page")
 
     # ---------- EXPORT MATRIX ----------
     with tab3:
