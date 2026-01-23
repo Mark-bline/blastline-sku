@@ -10,7 +10,7 @@ import base64
 # ==================================================
 COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
-DEFAULT_EXTRAS_MODE = "Multiple"
+DEFAULT_EXTRAS_MODE = "Single"
 EXTRAS_PER_PAGE = 12
 
 # ==================================================
@@ -261,6 +261,7 @@ def home():
     fields = cat_data["fields"]
     extras = cat_data.get("extras", [])
     sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
+    extras_mode = cat_data.get("settings", {}).get("extras_mode", DEFAULT_EXTRAS_MODE)
 
     c1, c2 = st.columns(2)
     sel = {}
@@ -312,32 +313,63 @@ def home():
                         st.session_state["extras_page"] = current_page + 1
                         st.rerun()
             
-            # Show extras in 2 columns (6x2 grid)
+            # Show extras based on mode
             page_extras = sorted_extras[start_idx:end_idx]
             
-            # Create 6 rows with 2 columns each
-            for row in range(6):
-                col1, col2 = st.columns(2)
+            if extras_mode == "Single":
+                # Radio button for single selection
+                extra_options = [{"name": "None", "code": ""}] + page_extras
+                extra_labels = [e["name"] for e in extra_options]
                 
-                # Left column item
-                left_idx = row
-                if left_idx < len(page_extras):
-                    with col1:
-                        e = page_extras[left_idx]
-                        actual_idx = start_idx + left_idx
-                        if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                            if e.get("code"):
-                                chosen.append(e["code"])
+                selected = st.radio(
+                    "Select one extra:",
+                    options=range(len(extra_options)),
+                    format_func=lambda i: extra_labels[i],
+                    key="single_extra_selector"
+                )
                 
-                # Right column item
-                right_idx = row + 6
-                if right_idx < len(page_extras):
-                    with col2:
-                        e = page_extras[right_idx]
-                        actual_idx = start_idx + right_idx
-                        if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                            if e.get("code"):
-                                chosen.append(e["code"])
+                if selected > 0 and extra_options[selected].get("code"):
+                    chosen.append(extra_options[selected]["code"])
+            else:
+                # Multiple selection with checkboxes (6x2 grid)
+                # Use custom CSS for responsive grid layout
+                st.markdown("""
+                <style>
+                .extras-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.5rem;
+                }
+                @media (max-width: 768px) {
+                    .extras-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                for row in range(6):
+                    col1, col2 = st.columns(2, gap="small")
+                    
+                    # Left column item
+                    left_idx = row
+                    if left_idx < len(page_extras):
+                        with col1:
+                            e = page_extras[left_idx]
+                            actual_idx = start_idx + left_idx
+                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                                if e.get("code"):
+                                    chosen.append(e["code"])
+                    
+                    # Right column item
+                    right_idx = row + 6
+                    if right_idx < len(page_extras):
+                        with col2:
+                            e = page_extras[right_idx]
+                            actual_idx = start_idx + right_idx
+                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                                if e.get("code"):
+                                    chosen.append(e["code"])
         else:
             st.info("No extras configured for this category")
 
@@ -440,7 +472,7 @@ def admin():
         show_success(f"Category '{cat}' deleted successfully!")
         st.rerun()
 
-    tab1, tab2, tab3 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "📊 Export Matrix"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "⚙️ Category Settings", "📊 Export Matrix"])
 
     # ---------- FIELDS CONFIG ----------
     with tab1:
@@ -551,8 +583,55 @@ def admin():
             st.write(f"**Pages in Configurator:** {total_pages}")
             st.write(f"**Layout:** 6 rows × 2 columns per page")
 
-    # ---------- EXPORT MATRIX ----------
+    # ---------- CATEGORY SETTINGS ----------
     with tab3:
+        cat_data = inv[cat]
+        settings = cat_data.get("settings", {})
+        
+        st.subheader("⚙️ Category Settings")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("##### SKU Separator")
+            separator = st.text_input(
+                "Separator Character",
+                value=settings.get("separator", DEFAULT_SEPARATOR),
+                help="Character used to separate SKU components",
+                max_chars=5,
+                key="separator_input"
+            )
+        
+        with col2:
+            st.markdown("##### Extras Selection Mode")
+            extras_mode_setting = st.radio(
+                "Allow users to select:",
+                options=["Single", "Multiple"],
+                index=0 if settings.get("extras_mode", DEFAULT_EXTRAS_MODE) == "Single" else 1,
+                help="Single: Users can select only one extra (radio buttons)\nMultiple: Users can select multiple extras (checkboxes)",
+                key="extras_mode_input"
+            )
+        
+        st.markdown("---")
+        
+        if st.button("💾 Save Settings", type="primary", use_container_width=True):
+            settings["separator"] = separator
+            settings["extras_mode"] = extras_mode_setting
+            cat_data["settings"] = settings
+            show_success("Category settings saved successfully!")
+            st.rerun()
+        
+        st.markdown("---")
+        st.subheader("Current Settings Preview")
+        st.write(f"**Separator:** `{separator}`")
+        st.write(f"**Extras Mode:** {extras_mode_setting}")
+        if extras_mode_setting == "Single":
+            st.info("ℹ️ Users will see radio buttons to select one extra at a time")
+        else:
+            st.info("ℹ️ Users will see checkboxes to select multiple extras")
+
+    # ---------- EXPORT MATRIX ----------
+    with tab4:
         st.subheader("📊 Full Matrix SKU Export")
         st.write("Generate a CSV file containing all possible SKU combinations for this category.")
         
