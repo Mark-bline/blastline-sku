@@ -6,6 +6,13 @@ import requests
 import base64
 
 # ==================================================
+# CONSTANTS
+# ==================================================
+COPY_BOX_HEIGHT = 160
+DEFAULT_SEPARATOR = "-"
+DEFAULT_EXTRAS_MODE = "Multiple"
+
+# ==================================================
 # SETUP
 # ==================================================
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
@@ -14,6 +21,8 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 # GITHUB STORAGE
 # ==================================================
 class GithubStorage:
+    """Handles data persistence to GitHub repository."""
+    
     def __init__(self):
         if "github" in st.secrets:
             g = st.secrets["github"]
@@ -25,6 +34,7 @@ class GithubStorage:
             self.can_connect = False
 
     def load(self):
+        """Load configuration data from GitHub."""
         if not self.can_connect:
             return None
         r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
@@ -34,6 +44,7 @@ class GithubStorage:
         return None
 
     def save(self, data):
+        """Save configuration data to GitHub."""
         if not self.can_connect:
             return False
         payload = {
@@ -52,9 +63,17 @@ class GithubStorage:
 # HELPERS
 # ==================================================
 def get_option_label(o):
+    """Format option for display in selectbox."""
     return f"{o['code']} : {o['name']}"
 
 def normalize_fields(cat):
+    """
+    Normalize category fields structure to ensure consistent format.
+    Converts legacy field formats to new structure with 'order' and 'options'.
+    
+    Args:
+        cat: Category dictionary (modified in place)
+    """
     fields = {}
     for i, (k, v) in enumerate(cat.get("fields", {}).items(), start=1):
         if isinstance(v, dict):
@@ -64,9 +83,27 @@ def normalize_fields(cat):
     cat["fields"] = fields
 
 def ordered_fields(fields):
+    """
+    Return field names sorted by their order value.
+    
+    Args:
+        fields: Dictionary of field configurations
+        
+    Returns:
+        List of field names in order
+    """
     return sorted(fields.keys(), key=lambda k: fields[k].get("order", 999))
 
 def normalize_option_df(data):
+    """
+    Convert options list to normalized DataFrame for editing.
+    
+    Args:
+        data: List of option dictionaries
+        
+    Returns:
+        DataFrame with code, name, order columns
+    """
     df = pd.DataFrame(data or [], columns=["code", "name", "order"])
     if df.empty:
         df = pd.DataFrame(columns=["code", "name", "order"])
@@ -75,6 +112,15 @@ def normalize_option_df(data):
     return df[["code", "name", "order"]]
 
 def big_copy_box(text):
+    """
+    Generate HTML for large, clickable SKU display with copy functionality.
+    
+    Args:
+        text: The SKU text to display and copy
+        
+    Returns:
+        HTML string with embedded JavaScript
+    """
     return f"""
     <div onclick="copySKU()" style="cursor:pointer;background:#111;
     border:2px solid #4CAF50;border-radius:14px;padding:26px;text-align:center">
@@ -94,6 +140,18 @@ def big_copy_box(text):
     </script>
     """
 
+def show_success(message):
+    """Display success message."""
+    st.success(message)
+
+def show_error(message):
+    """Display error message."""
+    st.error(message)
+
+def show_info(message):
+    """Display info message."""
+    st.info(message)
+
 # ==================================================
 # INIT
 # ==================================================
@@ -105,6 +163,7 @@ if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
 def go(p):
+    """Navigate to a different page."""
     st.session_state["page"] = p
     st.rerun()
 
@@ -112,6 +171,7 @@ def go(p):
 # HOME
 # ==================================================
 def home():
+    """Main SKU configuration page."""
     with st.sidebar:
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
@@ -121,7 +181,7 @@ def home():
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
-        st.warning("No categories available")
+        st.warning("No categories available. Please contact admin to set up product categories.")
         return
 
     cat = st.selectbox("Product Category", list(inv.keys()))
@@ -130,7 +190,7 @@ def home():
 
     fields = cat_data["fields"]
     extras = cat_data.get("extras", [])
-    sep = cat_data.get("settings", {}).get("separator", "")
+    sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
 
     c1, c2 = st.columns(2)
     sel = {}
@@ -141,17 +201,17 @@ def home():
             opts = fields[f]["options"]
             is_text = opts and opts[0].get("type") == "text"
             if is_text:
-                sel[f] = st.text_input(f)
+                sel[f] = st.text_input(f, help=f"Enter {f}")
             else:
                 if opts:
-                    o = st.selectbox(f, opts, format_func=get_option_label)
+                    o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = o["code"]
 
     with c2:
         st.subheader("Extras / Add-ons")
         chosen = []
         for e in extras:
-            if st.checkbox(e["name"]):
+            if st.checkbox(e["name"], help=f"Add {e['name']} to SKU"):
                 if e.get("code"):
                     chosen.append(e["code"])
 
@@ -162,7 +222,18 @@ def home():
         sku = base + (sep if base and chosen else "") + "".join(chosen)
 
         if sku:
-            st.components.v1.html(big_copy_box(sku), height=160)
+            st.components.v1.html(big_copy_box(sku), height=COPY_BOX_HEIGHT)
+            # Show SKU breakdown
+            with st.expander("SKU Breakdown"):
+                st.write("**Base Configuration:**")
+                for f in ordered_fields(fields):
+                    if sel.get(f):
+                        st.write(f"- {f}: `{sel[f]}`")
+                if chosen:
+                    st.write("**Extras:**")
+                    for e in extras:
+                        if e.get("code") in chosen:
+                            st.write(f"- {e['name']}: `{e['code']}`")
         else:
             st.info("Select options to generate SKU")
 
@@ -170,36 +241,68 @@ def home():
 # LOGIN
 # ==================================================
 def login():
+    """Admin login page."""
     st.subheader("Admin Login")
     pw = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pw == "admin123":
-            go("admin")
-        else:
-            st.error("Invalid password")
-    if st.button("Cancel"):
-        go("home")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Login", use_container_width=True):
+            if pw == "admin123":
+                go("admin")
+            else:
+                show_error("Invalid password. Please try again.")
+    with col2:
+        if st.button("Cancel", use_container_width=True):
+            go("home")
 
 # ==================================================
 # ADMIN
 # ==================================================
 def admin():
+    """Admin configuration page."""
     st.title("⚙️ Admin Settings")
+    
+    # Back to home button
+    if st.button("← Back to Home"):
+        go("home")
+    
+    st.markdown("---")
 
     inv = st.session_state["sku_data"]["inventory"]
 
     c1, c2 = st.columns([3, 1])
     with c1:
-        cat = st.selectbox("Product Category", list(inv.keys()))
+        if inv:
+            cat = st.selectbox("Product Category", list(inv.keys()))
+        else:
+            cat = None
+            st.info("No categories yet. Create one below.")
+            
     with c2:
         with st.form("add_cat"):
-            n = st.text_input("New Category", label_visibility="collapsed")
+            n = st.text_input("New Category", label_visibility="collapsed", placeholder="Category name")
             if st.form_submit_button("➕ Add") and n:
-                inv[n] = {"fields": {}, "extras": [], "settings": {"separator": "-", "extras_mode": "Multiple"}}
-                st.rerun()
+                if n in inv:
+                    show_error(f"Category '{n}' already exists!")
+                else:
+                    inv[n] = {
+                        "fields": {}, 
+                        "extras": [], 
+                        "settings": {
+                            "separator": DEFAULT_SEPARATOR, 
+                            "extras_mode": DEFAULT_EXTRAS_MODE
+                        }
+                    }
+                    show_success(f"Category '{n}' created successfully!")
+                    st.rerun()
 
-    if st.button("🗑️ Delete Category"):
+    if not cat:
+        return
+
+    if st.button("🗑️ Delete Category", help="Permanently delete this category"):
         del inv[cat]
+        show_success(f"Category '{cat}' deleted successfully!")
         st.rerun()
 
     tab1, tab2 = st.tabs(["🛠️ Configuration", "💾 Data I/O"])
@@ -216,60 +319,94 @@ def admin():
             name = a.text_input("Field Name")
             ftype = c.selectbox("Type", ["Dropdown", "Text Input"])
             if b.form_submit_button("Add") and name:
-                fields[name] = {
-                    "order": len(fields) + 1,
-                    "options": [{"type": "text", "code": "", "name": ""}] if ftype == "Text Input" else []
-                }
+                if name in fields:
+                    show_error(f"Field '{name}' already exists!")
+                else:
+                    fields[name] = {
+                        "order": len(fields) + 1,
+                        "options": [{"type": "text", "code": "", "name": ""}] if ftype == "Text Input" else []
+                    }
+                    show_success(f"Field '{name}' added successfully!")
+                    st.rerun()
+
+        if fields:
+            st.subheader("🔀 Field Order")
+            df = pd.DataFrame([{"Field": k, "Order": v["order"]} for k, v in fields.items()])
+            edited = st.data_editor(df, hide_index=True, use_container_width=True)
+            if st.button("Apply Field Order"):
+                for _, r in edited.iterrows():
+                    fields[r["Field"]]["order"] = int(r["Order"])
+                show_success("Field order updated successfully!")
                 st.rerun()
 
-        st.subheader("🔀 Field Order")
-        df = pd.DataFrame([{"Field": k, "Order": v["order"]} for k, v in fields.items()])
-        edited = st.data_editor(df, hide_index=True)
-        if st.button("Apply Field Order"):
-            for _, r in edited.iterrows():
-                fields[r["Field"]]["order"] = int(r["Order"])
-            st.rerun()
-
-        st.subheader("✏️ Rename / Delete Field")
-        field = st.selectbox("Select Field", ordered_fields(fields))
-        new_name = st.text_input("Rename Field To", value=field)
-        c1, c2 = st.columns(2)
-        if c1.button("Rename"):
-            if new_name and new_name not in fields:
-                fields[new_name] = fields.pop(field)
+            st.subheader("✏️ Rename / Delete Field")
+            field = st.selectbox("Select Field", ordered_fields(fields))
+            new_name = st.text_input("Rename Field To", value=field)
+            c1, c2 = st.columns(2)
+            if c1.button("Rename", use_container_width=True):
+                if new_name == field:
+                    show_info("Field name unchanged.")
+                elif new_name and new_name not in fields:
+                    fields[new_name] = fields.pop(field)
+                    show_success(f"Field renamed from '{field}' to '{new_name}'")
+                    st.rerun()
+                elif new_name in fields:
+                    show_error(f"Field '{new_name}' already exists!")
+                    
+            if c2.button("Delete", use_container_width=True):
+                del fields[field]
+                show_success(f"Field '{field}' deleted successfully!")
                 st.rerun()
-        if c2.button("Delete"):
-            del fields[field]
-            st.rerun()
 
-        st.subheader("🛠️ Field Options")
-        opts = fields[field]["options"]
-        if opts and opts[0].get("type") == "text":
-            st.info("Text input field")
+            st.subheader("🛠️ Field Options")
+            opts = fields[field]["options"]
+            if opts and opts[0].get("type") == "text":
+                st.info("This is a text input field - users will enter values manually.")
+            else:
+                df2 = normalize_option_df(opts)
+                edited_df = st.data_editor(
+                    df2, 
+                    num_rows="dynamic", 
+                    hide_index=True,
+                    use_container_width=True,
+                    column_config={
+                        "code": st.column_config.TextColumn("Code", help="SKU code segment"),
+                        "name": st.column_config.TextColumn("Name", help="Display name"),
+                        "order": st.column_config.NumberColumn("Order", help="Display order")
+                    }
+                )
+                if st.button("Update Options"):
+                    fields[field]["options"] = edited_df.to_dict("records")
+                    show_success(f"Options for '{field}' updated successfully!")
+                    st.rerun()
         else:
-            df2 = normalize_option_df(opts)
-            edited_df = st.data_editor(df2, num_rows="dynamic", hide_index=True)
-            if st.button("Update Options"):
-                fields[field]["options"] = edited_df.to_dict("records")
+            st.info("No fields configured yet. Add a field above to get started.")
 
     # ---------- DATA I/O ----------
     with tab2:
         st.subheader("Export")
         st.download_button(
-            "Download Config JSON",
+            "📥 Download Config JSON",
             json.dumps(st.session_state["sku_data"], indent=2),
             "sku_config.json",
-            "application/json"
+            "application/json",
+            use_container_width=True
         )
 
         st.subheader("Import")
         f = st.file_uploader("Upload Config JSON", type=["json"])
-        if f and st.button("Load Config"):
+        if f and st.button("📤 Load Config", use_container_width=True):
             st.session_state["sku_data"] = json.load(f)
+            show_success("Configuration loaded successfully!")
             st.rerun()
 
-    if st.button("☁️ Save to Cloud"):
-        GithubStorage().save(st.session_state["sku_data"])
+    st.markdown("---")
+    if st.button("☁️ Save to Cloud", use_container_width=True, type="primary"):
+        with st.spinner("Saving to cloud..."):
+            if GithubStorage().save(st.session_state["sku_data"]):
+                show_success("Configuration saved to cloud successfully!")
+            else:
+                show_error("Failed to save to cloud. Check your connection and credentials.")
         go("home")
 
 # ==================================================
