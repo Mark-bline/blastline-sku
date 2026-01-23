@@ -11,7 +11,7 @@ import base64
 COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Single"
-EXTRAS_PER_PAGE = 12
+EXTRAS_PER_PAGE = 10
 
 # ==================================================
 # SETUP
@@ -332,23 +332,29 @@ def home():
                     chosen.append(extra_options[selected]["code"])
             else:
                 # Multiple selection with checkboxes (6x2 grid)
-                # Use custom CSS for responsive grid layout
-                st.markdown("""
-                <style>
-                .extras-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 0.5rem;
-                }
-                @media (max-width: 768px) {
-                    .extras-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
                 for row in range(6):
+                    left_idx = row
+                    right_idx = row + 6
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    # Left column item
+                    if left_idx < len(page_extras):
+                        with col1:
+                            e = page_extras[left_idx]
+                            actual_idx = start_idx + left_idx
+                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                                if e.get("code"):
+                                    chosen.append(e["code"])
+                    
+                    # Right column item
+                    if right_idx < len(page_extras):
+                        with col2:
+                            e = page_extras[right_idx]
+                            actual_idx = start_idx + right_idx
+                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                                if e.get("code"):
+                                    chosen.append(e["code"])):
                     col1, col2 = st.columns(2, gap="small")
                     
                     # Left column item
@@ -555,7 +561,7 @@ def admin():
         extras = cat_data.get("extras", [])
         
         st.subheader("🎁 Manage Extras / Add-ons")
-        st.info(f"Extras will be displayed in a 6×2 grid (12 per page) in the configurator with pagination controls.")
+        st.info(f"Extras will be displayed in a 5×2 grid (10 per page) in the configurator with pagination controls.")
         
         extras_df = normalize_extras_df(extras)
         edited_extras = st.data_editor(
@@ -581,7 +587,7 @@ def admin():
             st.write(f"**Total Extras:** {len(extras)}")
             total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
             st.write(f"**Pages in Configurator:** {total_pages}")
-            st.write(f"**Layout:** 6 rows × 2 columns per page")
+            st.write(f"**Layout:** 5 rows × 2 columns per page")
 
     # ---------- CATEGORY SETTINGS ----------
     with tab3:
