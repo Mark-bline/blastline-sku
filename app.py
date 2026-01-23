@@ -89,7 +89,6 @@ def sku_box(text):
 
 def generate_matrix(data):
     rows = []
-
     for cat_name, cat in data["inventory"].items():
         sep = cat["settings"]["separator"]
         mode = cat["settings"]["extras_mode"]
@@ -127,14 +126,14 @@ def generate_matrix(data):
 # HOME
 # =====================================================
 def home():
-    st.title("Blastline SKU Configurator")
-    st.markdown("---")
-        with st.sidebar:
+    with st.sidebar:
         st.markdown("### Navigation")
         if st.button("⚙️ Admin Settings", use_container_width=True):
             st.session_state["page"] = "admin"
             st.experimental_rerun()
 
+    st.title("Blastline SKU Configurator")
+    st.markdown("---")
 
     inventory = st.session_state["sku_data"]["inventory"]
     category = st.selectbox("Product Category", list(inventory.keys()))
@@ -145,16 +144,14 @@ def home():
     sep = cat["settings"]["separator"]
     mode = cat["settings"]["extras_mode"]
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
     selections = {}
 
     # ---------- CONFIGURATION ----------
     with col1:
         st.subheader("Configuration")
-
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
-
             if not opts:
                 st.selectbox(f, ["No options available"], disabled=True)
                 selections[f] = ""
@@ -188,19 +185,22 @@ def home():
                     selected.append(e["code"])
 
         if total_pages > 1:
-            c1, c2, c3 = st.columns([1,2,1])
+            c1, c2, c3 = st.columns([1, 2, 1])
             if c1.button("◀", disabled=page == 0):
                 st.session_state["extras_page"] -= 1
                 st.experimental_rerun()
-            c2.markdown(f"<center>{page+1} / {total_pages}</center>", unsafe_allow_html=True)
+            c2.markdown(
+                f"<center>{page+1} / {total_pages}</center>",
+                unsafe_allow_html=True
+            )
             if c3.button("▶", disabled=page == total_pages - 1):
                 st.session_state["extras_page"] += 1
                 st.experimental_rerun()
 
-        st.markdown("---")
+        st.markdown("### Generated SKU")
         base = sep.join([selections[k] for k in ordered_fields(fields) if selections[k]])
         sku = base + (sep if base and selected else "") + "".join(selected)
-        st.components.v1.html(sku_box(sku), height=190)
+        st.components.v1.html(sku_box(sku), height=200)
 
 # =====================================================
 # ADMIN
@@ -222,7 +222,6 @@ def admin():
         field_df = pd.DataFrame(
             [{"Field": k, "Order": v["order"]} for k, v in cat["fields"].items()]
         )
-
         field_df = st.data_editor(field_df, num_rows="dynamic", hide_index=True)
 
         if st.button("Apply Field Changes"):
@@ -280,6 +279,10 @@ def admin():
                 "text/csv"
             )
 
+        if st.button("⬅ Back to Home"):
+            st.session_state["page"] = "home"
+            st.experimental_rerun()
+
 # =====================================================
 # ROUTER
 # =====================================================
@@ -287,4 +290,3 @@ if st.session_state["page"] == "home":
     home()
 elif st.session_state["page"] == "admin":
     admin()
-
