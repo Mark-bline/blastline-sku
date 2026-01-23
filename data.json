@@ -43,11 +43,53 @@
         },
         "Configuration": {
           "order": 3,
-          "options": []
+          "options": [
+            {
+              "code": "M",
+              "name": "Manual",
+              "order": 1
+            },
+            {
+              "code": "A",
+              "name": "Automatic",
+              "order": 2
+            },
+            {
+              "code": "C",
+              "name": "Contractor",
+              "order": null
+            }
+          ]
         },
         "Certification": {
           "order": 4,
-          "options": []
+          "options": [
+            {
+              "code": "T",
+              "name": "Third Party Certified",
+              "order": null
+            },
+            {
+              "code": "N",
+              "name": "Non Certified",
+              "order": null
+            },
+            {
+              "code": "U",
+              "name": "ASME Certified",
+              "order": null
+            },
+            {
+              "code": "E",
+              "name": "PED Certified",
+              "order": null
+            },
+            {
+              "code": "D",
+              "name": "DOSH Certified",
+              "order": null
+            }
+          ]
         },
         "Valve": {
           "order": 5,
