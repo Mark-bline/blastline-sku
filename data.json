@@ -6,101 +6,54 @@
         "separator": ""
       },
       "fields": {
-        "Type": {
+        "Brand": {
           "order": 1,
           "options": [
             {
               "code": "BL",
-              "name": "Blast Machine",
-              "order": 1
+              "name": "Blastline",
+              "order": "1"
+            },
+            {
+              "code": "NB",
+              "name": "Neo Blast",
+              "order": "2"
             }
           ]
         },
-        "Material / Config": {
-          "order": 4,
-          "options": [
-            {
-              "code": "M",
-              "name": "M",
-              "order": 1
-            },
-            {
-              "code": "C",
-              "name": "C",
-              "order": 2
-            }
-          ]
-        },
-        "Size / Capacity": {
-          "order": 3,
-          "options": [
-            {
-              "code": "20",
-              "name": "1080",
-              "order": 1
-            },
-            {
-              "code": "30",
-              "name": "1090",
-              "order": 2
-            },
-            {
-              "code": "50",
-              "name": "14160",
-              "order": 3
-            },
-            {
-              "code": "100",
-              "name": "20300",
-              "order": 4
-            },
-            {
-              "code": "200",
-              "name": "24650",
-              "order": 5
-            },
-            {
-              "code": "300",
-              "name": "24800",
-              "order": 6
-            }
-          ]
-        },
-        "Pressure / Spec": {
+        "Capacity": {
           "order": 2,
-          "options": [
-            {
-              "code": "S",
-              "name": "S",
-              "order": 1
-            },
-            {
-              "code": "ST",
-              "name": "ST",
-              "order": 2
-            },
-            {
-              "code": "P",
-              "name": "P",
-              "order": 3
-            },
-            {
-              "code": "U",
-              "name": "U",
-              "order": 4
-            }
-          ]
+          "options": []
         },
-        "Brand": {
-          "order": 5,
+        "Configuration": {
+          "order": 3,
           "options": []
         },
         "Certification": {
+          "order": 4,
+          "options": []
+        },
+        "Valve": {
+          "order": 5,
+          "options": []
+        },
+        "Screen/Cover": {
           "order": 6,
           "options": []
         }
       },
-      "extras": []
+      "extras": [
+        {
+          "name": "Test",
+          "code": "TS",
+          "order": "1"
+        },
+        {
+          "name": "Test 2",
+          "code": "T2",
+          "order": "2"
+        }
+      ]
     },
     "Air Receiver": {
       "settings": {
