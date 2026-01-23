@@ -108,7 +108,18 @@
         },
         "Screen/Cover": {
           "order": 6,
-          "options": []
+          "options": [
+            {
+              "code": "S",
+              "name": "With Screen ",
+              "order": 1
+            },
+            {
+              "code": "SC",
+              "name": "with Screen & Cover",
+              "order": 2
+            }
+          ]
         }
       },
       "extras": [
