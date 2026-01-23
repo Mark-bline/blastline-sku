@@ -11,6 +11,7 @@ import base64
 COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Multiple"
+EXTRAS_PER_PAGE = 12
 
 # ==================================================
 # SETUP
@@ -111,6 +112,63 @@ def normalize_option_df(data):
         df["order"] = range(1, len(df) + 1)
     return df[["code", "name", "order"]]
 
+def normalize_extras_df(data):
+    """
+    Convert extras list to normalized DataFrame for editing.
+    
+    Args:
+        data: List of extra dictionaries
+        
+    Returns:
+        DataFrame with code and name columns
+    """
+    df = pd.DataFrame(data or [], columns=["code", "name"])
+    if df.empty:
+        df = pd.DataFrame(columns=["code", "name"])
+    return df[["code", "name"]]
+
+def generate_full_matrix(cat_data):
+    """
+    Generate all possible SKU combinations for a category.
+    
+    Args:
+        cat_data: Category configuration dictionary
+        
+    Returns:
+        pandas DataFrame with all SKU combinations
+    """
+    normalize_fields(cat_data)
+    fields = cat_data["fields"]
+    sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
+    
+    # Get all field combinations (excluding text input fields)
+    field_combos = []
+    field_names = []
+    
+    for f in ordered_fields(fields):
+        opts = fields[f]["options"]
+        is_text = opts and opts[0].get("type") == "text"
+        if not is_text and opts:
+            field_names.append(f)
+            field_combos.append([o["code"] for o in opts])
+    
+    # Generate all combinations
+    if not field_combos:
+        return pd.DataFrame(columns=["SKU"] + field_names)
+    
+    combinations = list(itertools.product(*field_combos))
+    
+    # Create DataFrame
+    rows = []
+    for combo in combinations:
+        sku = sep.join(combo)
+        row = {"SKU": sku}
+        for i, fname in enumerate(field_names):
+            row[fname] = combo[i]
+        rows.append(row)
+    
+    return pd.DataFrame(rows)
+
 def big_copy_box(text):
     """
     Generate HTML for large, clickable SKU display with copy functionality.
@@ -162,6 +220,9 @@ if "sku_data" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
+if "extras_page" not in st.session_state:
+    st.session_state["extras_page"] = 0
+
 def go(p):
     """Navigate to a different page."""
     st.session_state["page"] = p
@@ -210,10 +271,42 @@ def home():
     with c2:
         st.subheader("Extras / Add-ons")
         chosen = []
-        for e in extras:
-            if st.checkbox(e["name"], help=f"Add {e['name']} to SKU"):
-                if e.get("code"):
-                    chosen.append(e["code"])
+        
+        if extras:
+            # Calculate pagination
+            total_extras = len(extras)
+            total_pages = (total_extras - 1) // EXTRAS_PER_PAGE + 1 if total_extras > 0 else 1
+            current_page = st.session_state.get("extras_page", 0)
+            
+            # Ensure current page is within bounds
+            if current_page >= total_pages:
+                current_page = total_pages - 1
+                st.session_state["extras_page"] = current_page
+            
+            start_idx = current_page * EXTRAS_PER_PAGE
+            end_idx = min(start_idx + EXTRAS_PER_PAGE, total_extras)
+            
+            # Show pagination controls if needed
+            if total_pages > 1:
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col1:
+                    if st.button("← Prev", disabled=(current_page == 0), use_container_width=True):
+                        st.session_state["extras_page"] = current_page - 1
+                        st.rerun()
+                with col2:
+                    st.markdown(f"<div style='text-align:center;padding:8px'>Page {current_page + 1} of {total_pages}</div>", unsafe_allow_html=True)
+                with col3:
+                    if st.button("Next →", disabled=(current_page == total_pages - 1), use_container_width=True):
+                        st.session_state["extras_page"] = current_page + 1
+                        st.rerun()
+            
+            # Show extras for current page
+            for e in extras[start_idx:end_idx]:
+                if st.checkbox(e["name"], help=f"Add {e['name']} to SKU"):
+                    if e.get("code"):
+                        chosen.append(e["code"])
+        else:
+            st.info("No extras configured for this category")
 
         st.markdown("---")
         st.subheader("Generated SKU")
@@ -305,9 +398,9 @@ def admin():
         show_success(f"Category '{cat}' deleted successfully!")
         st.rerun()
 
-    tab1, tab2 = st.tabs(["🛠️ Configuration", "💾 Data I/O"])
+    tab1, tab2, tab3 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "📊 Export Matrix"])
 
-    # ---------- CONFIG ----------
+    # ---------- FIELDS CONFIG ----------
     with tab1:
         cat_data = inv[cat]
         normalize_fields(cat_data)
@@ -382,23 +475,88 @@ def admin():
         else:
             st.info("No fields configured yet. Add a field above to get started.")
 
-    # ---------- DATA I/O ----------
+    # ---------- EXTRAS MANAGEMENT ----------
     with tab2:
-        st.subheader("Export")
-        st.download_button(
-            "📥 Download Config JSON",
-            json.dumps(st.session_state["sku_data"], indent=2),
-            "sku_config.json",
-            "application/json",
-            use_container_width=True
+        cat_data = inv[cat]
+        extras = cat_data.get("extras", [])
+        
+        st.subheader("🎁 Manage Extras / Add-ons")
+        st.info(f"Extras will be displayed {EXTRAS_PER_PAGE} at a time in the configurator with pagination controls.")
+        
+        extras_df = normalize_extras_df(extras)
+        edited_extras = st.data_editor(
+            extras_df,
+            num_rows="dynamic",
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "code": st.column_config.TextColumn("Code", help="SKU code for this extra (will be appended to SKU)"),
+                "name": st.column_config.TextColumn("Name", help="Display name shown to users")
+            }
         )
-
-        st.subheader("Import")
-        f = st.file_uploader("Upload Config JSON", type=["json"])
-        if f and st.button("📤 Load Config", use_container_width=True):
-            st.session_state["sku_data"] = json.load(f)
-            show_success("Configuration loaded successfully!")
+        
+        if st.button("💾 Save Extras", type="primary", use_container_width=True):
+            cat_data["extras"] = edited_extras.to_dict("records")
+            show_success(f"Extras updated successfully! Total: {len(edited_extras)}")
             st.rerun()
+        
+        if len(extras) > 0:
+            st.markdown("---")
+            st.subheader("Preview")
+            st.write(f"**Total Extras:** {len(extras)}")
+            total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
+            st.write(f"**Pages in Configurator:** {total_pages}")
+
+    # ---------- EXPORT MATRIX ----------
+    with tab3:
+        st.subheader("📊 Full Matrix SKU Export")
+        st.write("Generate a CSV file containing all possible SKU combinations for this category.")
+        
+        cat_data = inv[cat]
+        normalize_fields(cat_data)
+        
+        if cat_data["fields"]:
+            # Preview count
+            field_combos = []
+            for f in ordered_fields(cat_data["fields"]):
+                opts = cat_data["fields"][f]["options"]
+                is_text = opts and opts[0].get("type") == "text"
+                if not is_text and opts:
+                    field_combos.append(len(opts))
+            
+            if field_combos:
+                total_combinations = 1
+                for count in field_combos:
+                    total_combinations *= count
+                
+                st.info(f"This will generate **{total_combinations:,}** SKU combinations")
+                
+                if st.button("🔄 Generate Matrix", use_container_width=True):
+                    with st.spinner("Generating SKU matrix..."):
+                        matrix_df = generate_full_matrix(cat_data)
+                        st.session_state["matrix_preview"] = matrix_df
+                        show_success(f"Generated {len(matrix_df):,} SKU combinations!")
+                
+                if "matrix_preview" in st.session_state:
+                    st.markdown("---")
+                    st.subheader("Preview")
+                    st.dataframe(st.session_state["matrix_preview"].head(50), use_container_width=True)
+                    if len(st.session_state["matrix_preview"]) > 50:
+                        st.caption(f"Showing first 50 of {len(st.session_state['matrix_preview']):,} rows")
+                    
+                    csv = st.session_state["matrix_preview"].to_csv(index=False)
+                    st.download_button(
+                        "📥 Download Full Matrix CSV",
+                        csv,
+                        f"{cat}_full_matrix.csv",
+                        "text/csv",
+                        use_container_width=True,
+                        type="primary"
+                    )
+            else:
+                st.warning("No dropdown fields configured. Text input fields are excluded from matrix generation.")
+        else:
+            st.warning("No fields configured yet. Add fields in the Fields Configuration tab.")
 
     st.markdown("---")
     if st.button("☁️ Save to Cloud", use_container_width=True, type="primary"):
