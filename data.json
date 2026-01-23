@@ -93,7 +93,18 @@
         },
         "Valve": {
           "order": 5,
-          "options": []
+          "options": [
+            {
+              "code": "FSV",
+              "name": "Flat Sand Valve",
+              "order": 1
+            },
+            {
+              "code": "MV",
+              "name": "Micro Valve",
+              "order": 2
+            }
+          ]
         },
         "Screen/Cover": {
           "order": 6,
