@@ -225,6 +225,12 @@ if "page" not in st.session_state:
 if "extras_page" not in st.session_state:
     st.session_state["extras_page"] = 0
 
+if "confirm_delete_cat" not in st.session_state:
+    st.session_state["confirm_delete_cat"] = None
+
+if "confirm_delete_field" not in st.session_state:
+    st.session_state["confirm_delete_field"] = None
+
 def go(p):
     """Navigate to a different page."""
     st.session_state["page"] = p
@@ -408,18 +414,23 @@ def home():
 def login():
     """Admin login page."""
     st.subheader("Admin Login")
-    pw = st.text_input("Password", type="password")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Login", use_container_width=True):
-            if pw == "admin123":
-                go("admin")
-            else:
-                show_error("Invalid password. Please try again.")
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col2:
-        if st.button("Cancel", use_container_width=True):
-            go("home")
+        pw = st.text_input("Password", type="password")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Login", use_container_width=True):
+                if pw == "admin123":
+                    go("admin")
+                else:
+                    show_error("Invalid password. Please try again.")
+        with c2:
+            if st.button("Cancel", use_container_width=True):
+                go("home")
 
 # ==================================================
 # ADMIN
@@ -428,9 +439,11 @@ def admin():
     """Admin configuration page."""
     st.title("⚙️ Admin Settings")
     
-    # Back to home button
-    if st.button("← Back to Home"):
-        go("home")
+    # Back to home button - constrained width
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col1:
+        if st.button("← Back to Home"):
+            go("home")
     
     st.markdown("---")
 
@@ -465,10 +478,26 @@ def admin():
     if not cat:
         return
 
-    if st.button("🗑️ Delete Category", help="Permanently delete this category"):
-        del inv[cat]
-        show_success(f"Category '{cat}' deleted successfully!")
-        st.rerun()
+    # Delete Category with confirmation
+    if st.session_state.get("confirm_delete_cat") == cat:
+        st.warning(f"⚠️ Are you sure you want to delete category '{cat}'? This cannot be undone!")
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("✓ Yes, Delete", type="primary"):
+                del inv[cat]
+                st.session_state["confirm_delete_cat"] = None
+                show_success(f"Category '{cat}' deleted successfully!")
+                st.rerun()
+        with col2:
+            if st.button("✗ Cancel"):
+                st.session_state["confirm_delete_cat"] = None
+                st.rerun()
+    else:
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col1:
+            if st.button("🗑️ Delete Category", help="Permanently delete this category"):
+                st.session_state["confirm_delete_cat"] = cat
+                st.rerun()
 
     tab1, tab2, tab3, tab4 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "⚙️ Category Settings", "📊 Export Matrix"])
 
@@ -498,30 +527,48 @@ def admin():
             st.subheader("🔀 Field Order")
             df = pd.DataFrame([{"Field": k, "Order": v["order"]} for k, v in fields.items()])
             edited = st.data_editor(df, hide_index=True, use_container_width=True)
-            if st.button("Apply Field Order"):
-                for _, r in edited.iterrows():
-                    fields[r["Field"]]["order"] = int(r["Order"])
-                show_success("Field order updated successfully!")
-                st.rerun()
+            
+            col1, col2, col3 = st.columns([1, 3, 1])
+            with col1:
+                if st.button("Apply Field Order"):
+                    for _, r in edited.iterrows():
+                        fields[r["Field"]]["order"] = int(r["Order"])
+                    show_success("Field order updated successfully!")
+                    st.rerun()
 
             st.subheader("✏️ Rename / Delete Field")
             field = st.selectbox("Select Field", ordered_fields(fields))
             new_name = st.text_input("Rename Field To", value=field)
-            c1, c2 = st.columns(2)
-            if c1.button("Rename", use_container_width=True):
-                if new_name == field:
-                    show_info("Field name unchanged.")
-                elif new_name and new_name not in fields:
-                    fields[new_name] = fields.pop(field)
-                    show_success(f"Field renamed from '{field}' to '{new_name}'")
+            
+            # Delete Field with confirmation
+            if st.session_state.get("confirm_delete_field") == field:
+                st.warning(f"⚠️ Are you sure you want to delete field '{field}'? This cannot be undone!")
+                col1, col2, col3 = st.columns([1, 1, 2])
+                with col1:
+                    if st.button("✓ Yes, Delete", type="primary", key="confirm_delete_field_btn"):
+                        del fields[field]
+                        st.session_state["confirm_delete_field"] = None
+                        show_success(f"Field '{field}' deleted successfully!")
+                        st.rerun()
+                with col2:
+                    if st.button("✗ Cancel", key="cancel_delete_field_btn"):
+                        st.session_state["confirm_delete_field"] = None
+                        st.rerun()
+            else:
+                c1, c2 = st.columns(2)
+                if c1.button("Rename", use_container_width=True):
+                    if new_name == field:
+                        show_info("Field name unchanged.")
+                    elif new_name and new_name not in fields:
+                        fields[new_name] = fields.pop(field)
+                        show_success(f"Field renamed from '{field}' to '{new_name}'")
+                        st.rerun()
+                    elif new_name in fields:
+                        show_error(f"Field '{new_name}' already exists!")
+                        
+                if c2.button("Delete", use_container_width=True):
+                    st.session_state["confirm_delete_field"] = field
                     st.rerun()
-                elif new_name in fields:
-                    show_error(f"Field '{new_name}' already exists!")
-                    
-            if c2.button("Delete", use_container_width=True):
-                del fields[field]
-                show_success(f"Field '{field}' deleted successfully!")
-                st.rerun()
 
             st.subheader("🛠️ Field Options")
             opts = fields[field]["options"]
@@ -540,10 +587,12 @@ def admin():
                         "order": st.column_config.NumberColumn("Order", help="Display order")
                     }
                 )
-                if st.button("Update Options"):
-                    fields[field]["options"] = edited_df.to_dict("records")
-                    show_success(f"Options for '{field}' updated successfully!")
-                    st.rerun()
+                col1, col2, col3 = st.columns([1, 3, 1])
+                with col1:
+                    if st.button("Update Options"):
+                        fields[field]["options"] = edited_df.to_dict("records")
+                        show_success(f"Options for '{field}' updated successfully!")
+                        st.rerun()
         else:
             st.info("No fields configured yet. Add a field above to get started.")
 
@@ -568,10 +617,12 @@ def admin():
             }
         )
         
-        if st.button("💾 Save Extras", type="primary", use_container_width=True):
-            cat_data["extras"] = edited_extras.to_dict("records")
-            show_success(f"Extras updated successfully! Total: {len(edited_extras)}")
-            st.rerun()
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col1:
+            if st.button("💾 Save Extras", type="primary"):
+                cat_data["extras"] = edited_extras.to_dict("records")
+                show_success(f"Extras updated successfully! Total: {len(edited_extras)}")
+                st.rerun()
         
         if len(extras) > 0:
             st.markdown("---")
@@ -612,12 +663,14 @@ def admin():
         
         st.markdown("---")
         
-        if st.button("💾 Save Settings", type="primary", use_container_width=True):
-            settings["separator"] = separator
-            settings["extras_mode"] = extras_mode_setting
-            cat_data["settings"] = settings
-            show_success("Category settings saved successfully!")
-            st.rerun()
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col1:
+            if st.button("💾 Save Settings", type="primary"):
+                settings["separator"] = separator
+                settings["extras_mode"] = extras_mode_setting
+                cat_data["settings"] = settings
+                show_success("Category settings saved successfully!")
+                st.rerun()
         
         st.markdown("---")
         st.subheader("Current Settings Preview")
@@ -652,11 +705,14 @@ def admin():
                 
                 st.info(f"This will generate **{total_combinations:,}** SKU combinations")
                 
-                if st.button("🔄 Generate Matrix", use_container_width=True):
-                    with st.spinner("Generating SKU matrix..."):
-                        matrix_df = generate_full_matrix(cat_data)
-                        st.session_state["matrix_preview"] = matrix_df
-                        show_success(f"Generated {len(matrix_df):,} SKU combinations!")
+                col1, col2, col3 = st.columns([1, 3, 1])
+                with col1:
+                    if st.button("🔄 Generate Matrix"):
+                        with st.spinner("Generating SKU matrix..."):
+                            matrix_df = generate_full_matrix(cat_data)
+                            st.session_state["matrix_preview"] = matrix_df
+                            show_success(f"Generated {len(matrix_df):,} SKU combinations!")
+                            st.rerun()
                 
                 if "matrix_preview" in st.session_state:
                     st.markdown("---")
@@ -666,27 +722,32 @@ def admin():
                         st.caption(f"Showing first 50 of {len(st.session_state['matrix_preview']):,} rows")
                     
                     csv = st.session_state["matrix_preview"].to_csv(index=False)
-                    st.download_button(
-                        "📥 Download Full Matrix CSV",
-                        csv,
-                        f"{cat}_full_matrix.csv",
-                        "text/csv",
-                        use_container_width=True,
-                        type="primary"
-                    )
+                    
+                    col1, col2, col3 = st.columns([1, 3, 1])
+                    with col1:
+                        st.download_button(
+                            "📥 Download CSV",
+                            csv,
+                            f"{cat}_full_matrix.csv",
+                            "text/csv",
+                            type="primary"
+                        )
             else:
                 st.warning("No dropdown fields configured. Text input fields are excluded from matrix generation.")
         else:
             st.warning("No fields configured yet. Add fields in the Fields Configuration tab.")
 
     st.markdown("---")
-    if st.button("☁️ Save to Cloud", use_container_width=True, type="primary"):
-        with st.spinner("Saving to cloud..."):
-            if GithubStorage().save(st.session_state["sku_data"]):
-                show_success("Configuration saved to cloud successfully!")
-            else:
-                show_error("Failed to save to cloud. Check your connection and credentials.")
-        go("home")
+    
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col1:
+        if st.button("☁️ Save to Cloud", type="primary"):
+            with st.spinner("Saving to cloud..."):
+                if GithubStorage().save(st.session_state["sku_data"]):
+                    show_success("Configuration saved to cloud successfully!")
+                else:
+                    show_error("Failed to save to cloud. Check your connection and credentials.")
+            go("home")
 
 # ==================================================
 # ROUTER
