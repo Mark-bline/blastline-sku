@@ -263,8 +263,20 @@ def home():
     sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
     extras_mode = cat_data.get("settings", {}).get("extras_mode", DEFAULT_EXTRAS_MODE)
 
-    c1, c2 = st.columns(2)
     sel = {}
+    chosen = []
+
+    # Generated SKU section at top
+    st.subheader("Generated SKU")
+    
+    # Placeholders for SKU display
+    sku_placeholder = st.empty()
+    breakdown_placeholder = st.empty()
+    
+    st.markdown("---")
+
+    # Configuration section in 2 columns
+    c1, c2 = st.columns(2)
 
     with c1:
         st.subheader("Configuration")
@@ -280,7 +292,6 @@ def home():
 
     with c2:
         st.subheader("Extras / Add-ons")
-        chosen = []
         
         if extras:
             # Sort extras by order before displaying
@@ -331,10 +342,10 @@ def home():
                 if selected > 0 and extra_options[selected].get("code"):
                     chosen.append(extra_options[selected]["code"])
             else:
-                # Multiple selection with checkboxes (6x2 grid)
-                for row in range(6):
+                # Multiple selection with checkboxes (5x2 grid)
+                for row in range(5):
                     left_idx = row
-                    right_idx = row + 6
+                    right_idx = row + 5
                     
                     col1, col2 = st.columns(2)
                     
@@ -354,39 +365,22 @@ def home():
                             actual_idx = start_idx + right_idx
                             if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
                                 if e.get("code"):
-                                    chosen.append(e["code"])):
-                    col1, col2 = st.columns(2, gap="small")
-                    
-                    # Left column item
-                    left_idx = row
-                    if left_idx < len(page_extras):
-                        with col1:
-                            e = page_extras[left_idx]
-                            actual_idx = start_idx + left_idx
-                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                                if e.get("code"):
-                                    chosen.append(e["code"])
-                    
-                    # Right column item
-                    right_idx = row + 6
-                    if right_idx < len(page_extras):
-                        with col2:
-                            e = page_extras[right_idx]
-                            actual_idx = start_idx + right_idx
-                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                                if e.get("code"):
                                     chosen.append(e["code"])
         else:
             st.info("No extras configured for this category")
 
-        st.markdown("---")
-        st.subheader("Generated SKU")
+    # Now calculate and display the SKU at the top
+    base = sep.join([sel[k] for k in ordered_fields(fields) if sel.get(k)])
+    sku = base + (sep if base and chosen else "") + "".join(chosen)
 
-        base = sep.join([sel[k] for k in ordered_fields(fields) if sel.get(k)])
-        sku = base + (sep if base and chosen else "") + "".join(chosen)
-
+    with sku_placeholder.container():
         if sku:
             st.components.v1.html(big_copy_box(sku), height=COPY_BOX_HEIGHT)
+        else:
+            st.info("Select options to generate SKU")
+    
+    with breakdown_placeholder.container():
+        if sku:
             # Show SKU breakdown
             with st.expander("SKU Breakdown"):
                 st.write("**Base Configuration:**")
@@ -398,8 +392,6 @@ def home():
                     for e in extras:
                         if e.get("code") in chosen:
                             st.write(f"- {e['name']}: `{e['code']}`")
-        else:
-            st.info("Select options to generate SKU")
     
     # Footer
     st.markdown("---")
