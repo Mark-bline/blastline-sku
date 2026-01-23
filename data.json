@@ -17,7 +17,7 @@
           ]
         },
         "Material / Config": {
-          "order": 2,
+          "order": 4,
           "options": [
             {
               "code": "M",
@@ -67,7 +67,7 @@
           ]
         },
         "Pressure / Spec": {
-          "order": 4,
+          "order": 2,
           "options": [
             {
               "code": "S",
@@ -90,6 +90,10 @@
               "order": 4
             }
           ]
+        },
+        "Brand": {
+          "order": 5,
+          "options": []
         }
       },
       "extras": []
