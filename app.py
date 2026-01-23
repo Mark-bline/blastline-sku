@@ -183,20 +183,34 @@ def home():
     selections = {}
 
     with col1:
-        st.subheader("Configuration")
-        for f in ordered_fields(fields):
-    opts = fields[f]["options"]
-    is_text = opts and opts[0].get("type") == "text"
+    st.subheader("Configuration")
 
-    if is_text:
-        selections[f] = st.text_input(f)
-    else:
+    for f in ordered_fields(fields):
+        opts = fields[f]["options"]
+
+        # Text input field
+        if opts and isinstance(opts, list) and opts[0].get("type") == "text":
+            selections[f] = st.text_input(f)
+            continue
+
+        # Dropdown field with NO options
         if not opts:
-            st.selectbox(f, ["No options available"], disabled=True)
+            st.selectbox(
+                f,
+                ["No options available"],
+                disabled=True
+            )
             selections[f] = ""
-        else:
-            sel = st.selectbox(f, opts, format_func=option_label)
-            selections[f] = sel["code"]
+            continue
+
+        # Normal dropdown
+        sel = st.selectbox(
+            f,
+            opts,
+            format_func=option_label
+        )
+        selections[f] = sel["code"]
+
 
     with col2:
         st.subheader("Extras / Add-ons")
@@ -362,5 +376,6 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+
 
 
