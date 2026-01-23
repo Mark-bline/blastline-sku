@@ -94,6 +94,10 @@
         "Brand": {
           "order": 5,
           "options": []
+        },
+        "Certification": {
+          "order": 6,
+          "options": []
         }
       },
       "extras": []
