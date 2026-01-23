@@ -146,7 +146,7 @@
             }
           ]
         },
-        "Blast Machine": {
+        "Machine": {
           "order": 1,
           "options": [
             {
@@ -201,7 +201,7 @@
         "separator": ""
       },
       "fields": {
-        "Type": {
+        "Machine": {
           "order": 1,
           "options": [
             {
@@ -211,33 +211,158 @@
             }
           ]
         },
-        "Size / Capacity": {
+        "Capacity": {
           "order": 2,
           "options": [
             {
               "code": "100",
-              "name": "100",
+              "name": "100 Ltr",
               "order": 1
             },
             {
               "code": "200",
-              "name": "200",
+              "name": "200 Ltr",
               "order": 2
             },
             {
               "code": "500",
-              "name": "500",
+              "name": "500 Ltr",
               "order": 3
             },
             {
               "code": "1000",
-              "name": "1000",
+              "name": "1000 Ltr",
               "order": 4
             },
             {
               "code": "2000",
-              "name": "2000",
+              "name": "2000 Ltr",
               "order": 5
+            }
+          ]
+        },
+        "Certification": {
+          "order": 3,
+          "options": [
+            {
+              "code": "S",
+              "name": "Standard",
+              "order": 1
+            },
+            {
+              "code": "ST",
+              "name": "Standard 3rd Party",
+              "order": 2
+            },
+            {
+              "code": "P",
+              "name": "PED",
+              "order": 3
+            },
+            {
+              "code": "U",
+              "name": "ASME",
+              "order": 4
+            },
+            {
+              "code": "UD",
+              "name": "DOSH",
+              "order": 5
+            }
+          ]
+        },
+        "Type": {
+          "order": 4,
+          "options": [
+            {
+              "code": "V",
+              "name": "Vertical",
+              "order": 1
+            },
+            {
+              "code": "H",
+              "name": "Horizontal",
+              "order": null
+            },
+            {
+              "code": null,
+              "name": null,
+              "order": null
+            }
+          ]
+        },
+        "Stacking": {
+          "order": 5,
+          "options": [
+            {
+              "code": "0",
+              "name": "Not Stackable",
+              "order": null
+            },
+            {
+              "code": "1",
+              "name": "Stackable",
+              "order": null
+            }
+          ]
+        },
+        "Inlet": {
+          "order": 6,
+          "options": [
+            {
+              "code": "S",
+              "name": "Single Inlet",
+              "order": 1
+            },
+            {
+              "code": "D",
+              "name": "Double Inlet",
+              "order": 2
+            }
+          ]
+        },
+        "Outlet Configuration": {
+          "order": 8,
+          "options": [
+            {
+              "code": "S1",
+              "name": "Configuration 1",
+              "order": 1
+            },
+            {
+              "code": "S2",
+              "name": "Configuration 2",
+              "order": 2
+            },
+            {
+              "code": "S3",
+              "name": "Configuration 3",
+              "order": 3
+            }
+          ]
+        },
+        "Outlet": {
+          "order": 7,
+          "options": [
+            {
+              "type": "text",
+              "code": "",
+              "name": ""
+            }
+          ]
+        },
+        "Other customization / Client": {
+          "order": 9,
+          "options": [
+            {
+              "code": "NB",
+              "name": "NB",
+              "order": 1
+            },
+            {
+              "code": "EC",
+              "name": "EC",
+              "order": 2
             }
           ]
         }
