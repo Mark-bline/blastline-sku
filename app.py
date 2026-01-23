@@ -11,7 +11,7 @@ import base64
 COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Single"
-EXTRAS_PER_PAGE = 10
+EXTRAS_PER_PAGE = 8
 
 # ==================================================
 # SETUP
@@ -281,8 +281,8 @@ def home():
     
     st.markdown("---")
 
-    # Configuration section in 2 columns
-    c1, c2 = st.columns(2)
+    # Configuration section in 2 columns with visual separation
+    c1, separator, c2 = st.columns([5, 0.5, 5])
 
     with c1:
         st.subheader("Configuration")
@@ -295,6 +295,16 @@ def home():
                 if opts:
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = o["code"]
+    
+    with separator:
+        # Vertical separator line
+        st.markdown("""
+        <div style="
+            height: 100%;
+            border-left: 2px solid #e0e0e0;
+            margin: 0 auto;
+        "></div>
+        """, unsafe_allow_html=True)
 
     with c2:
         st.subheader("Extras / Add-ons")
@@ -348,30 +358,13 @@ def home():
                 if selected > 0 and extra_options[selected].get("code"):
                     chosen.append(extra_options[selected]["code"])
             else:
-                # Multiple selection with checkboxes (5x2 grid)
-                for row in range(5):
-                    left_idx = row
-                    right_idx = row + 5
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    # Left column item
-                    if left_idx < len(page_extras):
-                        with col1:
-                            e = page_extras[left_idx]
-                            actual_idx = start_idx + left_idx
-                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                                if e.get("code"):
-                                    chosen.append(e["code"])
-                    
-                    # Right column item
-                    if right_idx < len(page_extras):
-                        with col2:
-                            e = page_extras[right_idx]
-                            actual_idx = start_idx + right_idx
-                            if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
-                                if e.get("code"):
-                                    chosen.append(e["code"])
+                # Multiple selection with checkboxes (8x1 list)
+                for idx in range(len(page_extras)):
+                    e = page_extras[idx]
+                    actual_idx = start_idx + idx
+                    if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
+                        if e.get("code"):
+                            chosen.append(e["code"])
         else:
             st.info("No extras configured for this category")
 
@@ -602,7 +595,7 @@ def admin():
         extras = cat_data.get("extras", [])
         
         st.subheader("🎁 Manage Extras / Add-ons")
-        st.info(f"Extras will be displayed in a 5×2 grid (10 per page) in the configurator with pagination controls.")
+        st.info(f"Extras will be displayed as a list (8 per page) in the configurator with pagination controls.")
         
         extras_df = normalize_extras_df(extras)
         edited_extras = st.data_editor(
@@ -630,7 +623,7 @@ def admin():
             st.write(f"**Total Extras:** {len(extras)}")
             total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
             st.write(f"**Pages in Configurator:** {total_pages}")
-            st.write(f"**Layout:** 5 rows × 2 columns per page")
+            st.write(f"**Layout:** 8 items per page")
 
     # ---------- CATEGORY SETTINGS ----------
     with tab3:
