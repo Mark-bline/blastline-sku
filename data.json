@@ -6,16 +6,6 @@
         "separator": ""
       },
       "fields": {
-        "Brand": {
-          "order": 1,
-          "options": [
-            {
-              "code": "BL",
-              "name": "Blastline",
-              "order": "1"
-            }
-          ]
-        },
         "Capacity": {
           "order": 2,
           "options": [
@@ -153,6 +143,16 @@
               "code": "3",
               "name": "Screen Only",
               "order": 4
+            }
+          ]
+        },
+        "Blast Machine": {
+          "order": 1,
+          "options": [
+            {
+              "code": "BL",
+              "name": "Blast Machine",
+              "order": "1"
             }
           ]
         }
