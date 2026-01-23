@@ -13,11 +13,6 @@
               "code": "BL",
               "name": "Blastline",
               "order": "1"
-            },
-            {
-              "code": "NB",
-              "name": "Neo Blast",
-              "order": "2"
             }
           ]
         },
@@ -26,18 +21,33 @@
           "options": [
             {
               "code": "20",
-              "name": "20 LTR",
+              "name": "20 LTR (1080)",
               "order": 1
             },
             {
               "code": "30",
-              "name": "30 LTR",
+              "name": "30 LTR (1090)",
               "order": 2
             },
             {
               "code": "50",
-              "name": "50 LTR",
+              "name": "50 LTR (14160)",
               "order": 3
+            },
+            {
+              "code": "100",
+              "name": "100 LTR (20300)",
+              "order": 4
+            },
+            {
+              "code": "200",
+              "name": "200 LTR (24650)",
+              "order": 5
+            },
+            {
+              "code": "300",
+              "name": "300 LTR (24800)",
+              "order": 6
             }
           ]
         },
@@ -65,29 +75,29 @@
           "order": 4,
           "options": [
             {
-              "code": "T",
-              "name": "Third Party Certified",
-              "order": null
+              "code": "S",
+              "name": "Standard ",
+              "order": 1.0
             },
             {
-              "code": "N",
-              "name": "Non Certified",
-              "order": null
+              "code": "ST",
+              "name": "Standard Third Party",
+              "order": 2.0
             },
             {
               "code": "U",
               "name": "ASME Certified",
-              "order": null
+              "order": 3.0
             },
             {
-              "code": "E",
+              "code": "P",
               "name": "PED Certified",
-              "order": null
+              "order": 4.0
             },
             {
-              "code": "D",
-              "name": "DOSH Certified",
-              "order": null
+              "code": null,
+              "name": null,
+              "order": NaN
             }
           ]
         },
@@ -95,14 +105,29 @@
           "order": 5,
           "options": [
             {
-              "code": "FSV",
+              "code": "F",
               "name": "Flat Sand Valve",
               "order": 1
             },
             {
-              "code": "MV",
-              "name": "Micro Valve",
+              "code": "G",
+              "name": "Grit Valve",
               "order": 2
+            },
+            {
+              "code": "M",
+              "name": "Micro Valve",
+              "order": 3
+            },
+            {
+              "code": "T",
+              "name": "TV1",
+              "order": 4
+            },
+            {
+              "code": "S",
+              "name": "Saunder",
+              "order": 5
             }
           ]
         },
@@ -110,70 +135,93 @@
           "order": 6,
           "options": [
             {
-              "code": "S",
-              "name": "With Screen ",
+              "code": "0",
+              "name": "No Screen + Cover",
               "order": 1
             },
             {
-              "code": "SC",
-              "name": "with Screen & Cover",
+              "code": "1",
+              "name": "Screen + Cover",
               "order": 2
+            },
+            {
+              "code": "2",
+              "name": "Cover Only",
+              "order": 3
+            },
+            {
+              "code": "3",
+              "name": "Screen Only",
+              "order": 4
             }
           ]
         }
       },
       "extras": [
         {
-          "code": "TS",
-          "name": "Test"
+          "code": "01",
+          "name": "Moisture Seperator",
+          "order": 1.0
         },
         {
-          "code": "T2",
-          "name": "Test 2"
+          "code": "02",
+          "name": "PG + RV",
+          "order": 2.0
         },
         {
-          "code": "T3",
-          "name": "TEST 3"
+          "code": "03",
+          "name": "MS + PG + RV",
+          "order": 3.0
         },
         {
-          "code": "T4",
-          "name": "TEST 3"
+          "code": "04",
+          "name": "Popup Umberlla Only",
+          "order": 4.0
         },
         {
-          "code": "T5",
-          "name": "TEST 3"
+          "code": "05",
+          "name": "Umberlla + MS + PG + RV",
+          "order": 5.0
         },
         {
-          "code": "T6",
-          "name": "TEST 3"
+          "code": "06",
+          "name": "RV Only",
+          "order": 6.0
         },
         {
-          "code": "T7",
-          "name": "TEST 3"
+          "code": "07",
+          "name": "Umberella + PG + RV",
+          "order": 7.0
         },
         {
-          "code": "T8",
-          "name": "TEST 3"
+          "code": null,
+          "name": null,
+          "order": NaN
         },
         {
-          "code": "T9",
-          "name": "TEST 3"
+          "code": null,
+          "name": null,
+          "order": NaN
         },
         {
-          "code": "T10",
-          "name": "TEST 3"
+          "code": null,
+          "name": null,
+          "order": NaN
         },
         {
-          "code": "T11",
-          "name": "TEST 3"
+          "code": null,
+          "name": null,
+          "order": NaN
         },
         {
-          "code": "T12",
-          "name": "TEST 3"
+          "code": null,
+          "name": null,
+          "order": NaN
         },
         {
-          "code": "T13",
-          "name": "Test 4"
+          "code": null,
+          "name": null,
+          "order": NaN
         }
       ]
     },
