@@ -190,7 +190,12 @@ def home():
             if is_text:
                 selections[f] = st.text_input(f)
             else:
-                selections[f] = st.selectbox(f, opts, format_func=option_label)["code"]
+                if not opts:
+    st.selectbox(f, ["No options available"], disabled=True)
+    selections[f] = ""
+else:
+    sel = st.selectbox(f, opts, format_func=option_label)
+    selections[f] = sel["code"]
 
     with col2:
         st.subheader("Extras / Add-ons")
@@ -356,3 +361,4 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+
