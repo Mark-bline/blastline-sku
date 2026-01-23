@@ -282,7 +282,7 @@ def home():
     st.markdown("---")
 
     # Configuration section in 2 columns with visual separation
-    c1, separator_col, c2 = st.columns([5, 0.5, 5])
+    c1, separator, c2 = st.columns([5, 0.5, 5])
 
     with c1:
         st.subheader("Configuration")
@@ -296,7 +296,7 @@ def home():
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = o["code"]
     
-    with separator_col:
+    with separator:
         # Vertical separator line
         st.markdown("""
         <div style="
@@ -417,11 +417,7 @@ def login():
         c1, c2 = st.columns(2)
         with c1:
             if st.button("Login", use_container_width=True):
-                # FIX #1: Get password from secrets instead of hardcoding
-                admin_password = st.secrets.get("admin", {}).get("password")
-                if not admin_password:
-                    show_error("Admin password not configured. Contact administrator.")
-                elif pw == admin_password:
+                if pw == "admin123":
                     go("admin")
                 else:
                     show_error("Invalid password. Please try again.")
