@@ -129,6 +129,12 @@ def generate_matrix(data):
 def home():
     st.title("Blastline SKU Configurator")
     st.markdown("---")
+        with st.sidebar:
+        st.markdown("### Navigation")
+        if st.button("⚙️ Admin Settings", use_container_width=True):
+            st.session_state["page"] = "admin"
+            st.experimental_rerun()
+
 
     inventory = st.session_state["sku_data"]["inventory"]
     category = st.selectbox("Product Category", list(inventory.keys()))
@@ -281,3 +287,4 @@ if st.session_state["page"] == "home":
     home()
 elif st.session_state["page"] == "admin":
     admin()
+
