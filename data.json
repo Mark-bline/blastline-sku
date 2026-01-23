@@ -1,288 +1,5 @@
 {
   "inventory": {
-    "Hose-Helmet Breathing Air": {
-      "settings": {
-        "extras_mode": "Single",
-        "separator": ""
-      },
-      "fields": {
-        "Type": {
-          "order": 1,
-          "options": [
-            {
-              "code": "H",
-              "name": "Helmet Breathing Air",
-              "order": 1
-            }
-          ]
-        },
-        "Material / Config": {
-          "order": 2,
-          "options": [
-            {
-              "code": "NBR/PVC",
-              "name": "NBR/PVC",
-              "order": 1
-            }
-          ]
-        },
-        "Size / Capacity": {
-          "order": 3,
-          "options": [
-            {
-              "code": "06",
-              "name": "3/8",
-              "order": 1
-            }
-          ]
-        },
-        "Length / Variant": {
-          "order": 4,
-          "options": [
-            {
-              "code": "020",
-              "name": "20",
-              "order": 1
-            },
-            {
-              "code": "040",
-              "name": "40",
-              "order": 2
-            },
-            {
-              "code": "100",
-              "name": "100",
-              "order": 3
-            }
-          ]
-        },
-        "Pressure / Spec": {
-          "order": 5,
-          "options": [
-            {
-              "code": "20",
-              "name": "20Bar/300Psi",
-              "order": 1
-            }
-          ]
-        }
-      },
-      "extras": []
-    },
-    "Hose-Twinline": {
-      "settings": {
-        "extras_mode": "Single",
-        "separator": ""
-      },
-      "fields": {
-        "Type": [
-          {
-            "code": "H",
-            "name": "Twinline",
-            "order": 1
-          }
-        ],
-        "Material / Config": [
-          {
-            "code": "NBR/PVC",
-            "name": "NBR/PVC",
-            "order": 1
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "04",
-            "name": "1/4",
-            "order": 1
-          }
-        ],
-        "Length / Variant": [
-          {
-            "code": "020",
-            "name": "20",
-            "order": 1
-          },
-          {
-            "code": "040",
-            "name": "40",
-            "order": 2
-          },
-          {
-            "code": "100",
-            "name": "100",
-            "order": 3
-          }
-        ],
-        "Pressure / Spec": [
-          {
-            "code": "20",
-            "name": "20Bar/300Psi",
-            "order": 1
-          }
-        ]
-      },
-      "extras": []
-    },
-    "Couplings": {
-      "settings": {
-        "extras_mode": "Single",
-        "separator": ""
-      },
-      "fields": {
-        "Type": [
-          {
-            "code": "C",
-            "name": "Chicago/Crowfoot",
-            "order": 1
-          }
-        ],
-        "Material / Config": [
-          {
-            "code": "2L",
-            "name": "2L",
-            "order": 1
-          },
-          {
-            "code": "4L",
-            "name": "4L",
-            "order": 2
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "06",
-            "name": "3/8",
-            "order": 1
-          },
-          {
-            "code": "08",
-            "name": "1/2",
-            "order": 2
-          },
-          {
-            "code": "12",
-            "name": "3/4",
-            "order": 3
-          },
-          {
-            "code": "16",
-            "name": "1",
-            "order": 4
-          },
-          {
-            "code": "20",
-            "name": "1-1/4",
-            "order": 5
-          },
-          {
-            "code": "24",
-            "name": "1-1/2",
-            "order": 6
-          },
-          {
-            "code": "32",
-            "name": "2",
-            "order": 7
-          }
-        ]
-      },
-      "extras": []
-    },
-    "Clamps": {
-      "settings": {
-        "extras_mode": "Single",
-        "separator": ""
-      },
-      "fields": {
-        "Type": [
-          {
-            "code": "D",
-            "name": "Clamp",
-            "order": 1
-          }
-        ],
-        "Material / Config": [
-          {
-            "code": "2B",
-            "name": "2B",
-            "order": 1
-          },
-          {
-            "code": "4B",
-            "name": "4B",
-            "order": 2
-          },
-          {
-            "code": "2BS",
-            "name": "2BS",
-            "order": 3
-          },
-          {
-            "code": "4BS",
-            "name": "4BS",
-            "order": 4
-          },
-          {
-            "code": "CC",
-            "name": "CC",
-            "order": 5
-          },
-          {
-            "code": "JC",
-            "name": "JC",
-            "order": 6
-          },
-          {
-            "code": "OC",
-            "name": "OC",
-            "order": 7
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "04",
-            "name": "1/4",
-            "order": 1
-          },
-          {
-            "code": "06",
-            "name": "3/8",
-            "order": 2
-          },
-          {
-            "code": "08",
-            "name": "1/2",
-            "order": 3
-          },
-          {
-            "code": "12",
-            "name": "3/4",
-            "order": 4
-          },
-          {
-            "code": "16",
-            "name": "1",
-            "order": 5
-          },
-          {
-            "code": "20",
-            "name": "1-1/4",
-            "order": 6
-          },
-          {
-            "code": "24",
-            "name": "1-1/2",
-            "order": 7
-          },
-          {
-            "code": "32",
-            "name": "2",
-            "order": 8
-          }
-        ]
-      },
-      "extras": []
-    },
     "Blast Machine": {
       "settings": {
         "extras_mode": "Single",
@@ -383,79 +100,46 @@
         "separator": ""
       },
       "fields": {
-        "Type": [
-          {
-            "code": "AR",
-            "name": "Air Receiver",
-            "order": 1
-          }
-        ],
-        "Size / Capacity": [
-          {
-            "code": "100",
-            "name": "100",
-            "order": 1
-          },
-          {
-            "code": "200",
-            "name": "200",
-            "order": 2
-          },
-          {
-            "code": "500",
-            "name": "500",
-            "order": 3
-          },
-          {
-            "code": "1000",
-            "name": "1000",
-            "order": 4
-          },
-          {
-            "code": "2000",
-            "name": "2000",
-            "order": 5
-          }
-        ]
-      },
-      "extras": []
-    },
-    "Traded Product": {
-      "settings": {
-        "extras_mode": "Single",
-        "separator": ""
-      },
-      "fields": {
-        "Type": [
-          {
-            "code": "PG",
-            "name": "Graco",
-            "order": 1
-          },
-          {
-            "code": "PD",
-            "name": "Spraymaster",
-            "order": 2
-          },
-          {
-            "code": "MP",
-            "name": "Monti Power",
-            "order": 3
-          },
-          {
-            "code": "TP",
-            "name": "Positector",
-            "order": 4
-          }
-        ],
-        "Part Number": [
-          {
-            "code": "",
-            "name": "Enter Part No.",
-            "order": 1,
-            "type": "text"
-          }
-        ]
+        "Type": {
+          "order": 1,
+          "options": [
+            {
+              "code": "AR",
+              "name": "Air Receiver",
+              "order": 1
+            }
+          ]
+        },
+        "Size / Capacity": {
+          "order": 2,
+          "options": [
+            {
+              "code": "100",
+              "name": "100",
+              "order": 1
+            },
+            {
+              "code": "200",
+              "name": "200",
+              "order": 2
+            },
+            {
+              "code": "500",
+              "name": "500",
+              "order": 3
+            },
+            {
+              "code": "1000",
+              "name": "1000",
+              "order": 4
+            },
+            {
+              "code": "2000",
+              "name": "2000",
+              "order": 5
+            }
+          ]
+        }
       },
       "extras": []
     }
