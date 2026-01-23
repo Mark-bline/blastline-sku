@@ -2,43 +2,38 @@ import streamlit as st
 import pandas as pd
 import json
 import itertools
-import math
 import requests
 import base64
 
 # ==================================================
-# 1. SETUP
+# SETUP
 # ==================================================
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
 # ==================================================
-# 2. GITHUB STORAGE
+# GITHUB STORAGE
 # ==================================================
 class GithubStorage:
     def __init__(self):
         if "github" in st.secrets:
-            self.token = st.secrets["github"]["token"]
-            self.owner = st.secrets["github"]["owner"]
-            self.repo = st.secrets["github"]["repo"]
-            self.branch = st.secrets["github"]["branch"]
-            self.path = st.secrets["github"]["filepath"]
-            self.api_url = f"https://api.github.com/repos/{self.owner}/{self.repo}/contents/{self.path}"
-            self.headers = {"Authorization": f"token {self.token}"}
+            g = st.secrets["github"]
+            self.api_url = f"https://api.github.com/repos/{g['owner']}/{g['repo']}/contents/{g['filepath']}"
+            self.headers = {"Authorization": f"token {g['token']}"}
+            self.branch = g["branch"]
             self.can_connect = True
         else:
             self.can_connect = False
 
-    def load_data(self):
+    def load(self):
         if not self.can_connect:
             return None
         r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
         if r.status_code == 200:
-            content = r.json()
-            st.session_state["github_sha"] = content["sha"]
-            return json.loads(base64.b64decode(content["content"]).decode("utf-8"))
+            st.session_state["github_sha"] = r.json()["sha"]
+            return json.loads(base64.b64decode(r.json()["content"]).decode())
         return None
 
-    def save_data(self, data):
+    def save(self, data):
         if not self.can_connect:
             return False
         payload = {
@@ -54,113 +49,57 @@ class GithubStorage:
         return False
 
 # ==================================================
-# 3. HELPERS
+# HELPERS
 # ==================================================
-def get_option_label(item):
-    return f"{item['code']} : {item['name']}"
+def get_option_label(o):
+    return f"{o['code']} : {o['name']}"
 
-def normalize_fields_structure(cat_data):
-    fields = cat_data.get("fields", {})
-    normalized = {}
-    for i, (fname, fval) in enumerate(fields.items(), start=1):
-        if isinstance(fval, dict) and "options" in fval:
-            normalized[fname] = fval
+def normalize_fields(cat):
+    fields = {}
+    for i, (k, v) in enumerate(cat.get("fields", {}).items(), start=1):
+        if isinstance(v, dict):
+            fields[k] = v
         else:
-            normalized[fname] = {"order": i, "options": fval}
-    cat_data["fields"] = normalized
+            fields[k] = {"order": i, "options": v}
+    cat["fields"] = fields
 
 def ordered_fields(fields):
-    return [k for k, v in sorted(fields.items(), key=lambda x: x[1].get("order", 999))]
+    return sorted(fields.keys(), key=lambda k: fields[k].get("order", 999))
 
-def normalize_options_df(data):
-    if not data:
+def normalize_option_df(data):
+    df = pd.DataFrame(data or [], columns=["code", "name", "order"])
+    if df.empty:
         df = pd.DataFrame(columns=["code", "name", "order"])
-    else:
-        df = pd.DataFrame(data)
-    for c in ["code", "name", "order"]:
-        if c not in df.columns:
-            df[c] = ""
-    df = df[["code", "name", "order"]]
-    if df["order"].isnull().all() or df["order"].eq("").all():
+    if df["order"].isnull().all():
         df["order"] = range(1, len(df) + 1)
-    return df
+    return df[["code", "name", "order"]]
 
-def generate_matrix():
-    rows = []
-    inventory = st.session_state["sku_data"]["inventory"]
-
-    for cat, cat_data in inventory.items():
-        normalize_fields_structure(cat_data)
-        fields = cat_data["fields"]
-        extras = cat_data.get("extras", [])
-        sep = cat_data.get("settings", {}).get("separator", "")
-        mode = cat_data.get("settings", {}).get("extras_mode", "Multiple")
-
-        core_lists = []
-        for f in ordered_fields(fields):
-            opts = fields[f]["options"]
-            is_text = opts and isinstance(opts[0], dict) and opts[0].get("type") == "text"
-            core_lists.append([{"code": ""}] if is_text else opts)
-
-        cores = list(itertools.product(*core_lists))
-        extras_sets = [{"code": ""}]
-
-        if extras:
-            if mode == "Single":
-                extras_sets += [{"code": e["code"]} for e in extras if e.get("code")]
-            else:
-                valid = [e for e in extras if e.get("code")]
-                for r in range(1, len(valid) + 1):
-                    for c in itertools.combinations(valid, r):
-                        extras_sets.append({"code": "".join([x["code"] for x in c])})
-
-        for core in cores:
-            base = sep.join([c["code"] for c in core if c.get("code")])
-            for ex in extras_sets:
-                sku = base + (sep if base and ex["code"] else "") + ex["code"]
-                rows.append({"Category": cat, "Generated SKU": sku})
-
-    return pd.DataFrame(rows)
-
-def big_copy_sku(sku):
+def big_copy_box(text):
     return f"""
-    <div onclick="copySKU()" style="
-        cursor:pointer;
-        background:#111;
-        border:2px solid #4CAF50;
-        border-radius:14px;
-        padding:24px;
-        text-align:center;
-    ">
-        <div style="
-            font-size:42px;
-            font-family:monospace;
-            color:#4CAF50;
-            font-weight:700;
-        ">{sku}</div>
-        <div id="msg" style="margin-top:8px;color:#aaa;">📋 Click to copy</div>
+    <div onclick="copySKU()" style="cursor:pointer;background:#111;
+    border:2px solid #4CAF50;border-radius:14px;padding:26px;text-align:center">
+    <div style="font-size:44px;font-family:monospace;color:#4CAF50;font-weight:700">
+    {text}
     </div>
-
+    <div id="msg" style="margin-top:8px;color:#aaa">📋 Click to copy</div>
+    </div>
     <script>
-    function copySKU() {{
-        navigator.clipboard.writeText("{sku}");
-        const msg = document.getElementById("msg");
-        msg.innerText = "✅ Copied to clipboard";
-        msg.style.color = "#4CAF50";
-        setTimeout(() => {{
-            msg.innerText = "📋 Click to copy";
-            msg.style.color = "#aaa";
-        }}, 2000);
+    function copySKU(){{
+        navigator.clipboard.writeText("{text}");
+        let m=document.getElementById("msg");
+        m.innerText="✅ Copied to clipboard";
+        m.style.color="#4CAF50";
+        setTimeout(()=>{{m.innerText="📋 Click to copy";m.style.color="#aaa";}},2000);
     }}
     </script>
     """
 
 # ==================================================
-# 4. INIT
+# INIT
 # ==================================================
 if "sku_data" not in st.session_state:
     gh = GithubStorage()
-    st.session_state["sku_data"] = gh.load_data() or {"inventory": {}}
+    st.session_state["sku_data"] = gh.load() or {"inventory": {}}
 
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
@@ -170,7 +109,7 @@ def go(p):
     st.rerun()
 
 # ==================================================
-# 5. HOME
+# HOME
 # ==================================================
 def home():
     with st.sidebar:
@@ -180,55 +119,55 @@ def home():
     st.title("Blastline SKU Configurator")
     st.markdown("---")
 
-    inventory = st.session_state["sku_data"]["inventory"]
-    if not inventory:
+    inv = st.session_state["sku_data"]["inventory"]
+    if not inv:
         st.warning("No categories available")
         return
 
-    cat = st.selectbox("Product Category", list(inventory.keys()))
-    cat_data = inventory[cat]
-    normalize_fields_structure(cat_data)
+    cat = st.selectbox("Product Category", list(inv.keys()))
+    cat_data = inv[cat]
+    normalize_fields(cat_data)
 
     fields = cat_data["fields"]
     extras = cat_data.get("extras", [])
     sep = cat_data.get("settings", {}).get("separator", "")
 
     c1, c2 = st.columns(2)
-    selections = {}
+    sel = {}
 
     with c1:
         st.subheader("Configuration")
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
-            is_text = opts and isinstance(opts[0], dict) and opts[0].get("type") == "text"
+            is_text = opts and opts[0].get("type") == "text"
             if is_text:
-                selections[f] = st.text_input(f)
+                sel[f] = st.text_input(f)
             else:
                 if opts:
                     o = st.selectbox(f, opts, format_func=get_option_label)
-                    selections[f] = o["code"]
+                    sel[f] = o["code"]
 
     with c2:
         st.subheader("Extras / Add-ons")
-        selected = []
+        chosen = []
         for e in extras:
             if st.checkbox(e["name"]):
                 if e.get("code"):
-                    selected.append(e["code"])
+                    chosen.append(e["code"])
 
         st.markdown("---")
         st.subheader("Generated SKU")
 
-        base = sep.join([selections[k] for k in ordered_fields(fields) if selections.get(k)])
-        sku = base + (sep if base and selected else "") + "".join(selected)
+        base = sep.join([sel[k] for k in ordered_fields(fields) if sel.get(k)])
+        sku = base + (sep if base and chosen else "") + "".join(chosen)
 
         if sku:
-            st.components.v1.html(big_copy_sku(sku), height=150)
+            st.components.v1.html(big_copy_box(sku), height=160)
         else:
-            st.info("Select configuration to generate SKU")
+            st.info("Select options to generate SKU")
 
 # ==================================================
-# 6. LOGIN
+# LOGIN
 # ==================================================
 def login():
     st.subheader("Admin Login")
@@ -242,47 +181,44 @@ def login():
         go("home")
 
 # ==================================================
-# 7. ADMIN
+# ADMIN
 # ==================================================
 def admin():
     st.title("⚙️ Admin Settings")
 
-    inventory = st.session_state["sku_data"]["inventory"]
+    inv = st.session_state["sku_data"]["inventory"]
 
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        cat = st.selectbox("Product Category", list(inventory.keys()))
-    with col2:
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        cat = st.selectbox("Product Category", list(inv.keys()))
+    with c2:
         with st.form("add_cat"):
-            new_cat = st.text_input("New Category", placeholder="Name", label_visibility="collapsed")
-            if st.form_submit_button("➕ Add") and new_cat and new_cat not in inventory:
-                inventory[new_cat] = {
-                    "fields": {},
-                    "extras": [],
-                    "settings": {"separator": "-", "extras_mode": "Multiple"}
-                }
+            n = st.text_input("New Category", label_visibility="collapsed")
+            if st.form_submit_button("➕ Add") and n:
+                inv[n] = {"fields": {}, "extras": [], "settings": {"separator": "-", "extras_mode": "Multiple"}}
                 st.rerun()
 
     if st.button("🗑️ Delete Category"):
-        del inventory[cat]
+        del inv[cat]
         st.rerun()
 
     tab1, tab2 = st.tabs(["🛠️ Configuration", "💾 Data I/O"])
 
+    # ---------- CONFIG ----------
     with tab1:
-        cat_data = inventory[cat]
-        normalize_fields_structure(cat_data)
+        cat_data = inv[cat]
+        normalize_fields(cat_data)
         fields = cat_data["fields"]
 
         st.subheader("➕ Add Field")
         with st.form("add_field"):
             a, b, c = st.columns([2, 1, 1])
-            fname = a.text_input("Field Name")
+            name = a.text_input("Field Name")
             ftype = c.selectbox("Type", ["Dropdown", "Text Input"])
-            if b.form_submit_button("Add"):
-                fields[fname] = {
+            if b.form_submit_button("Add") and name:
+                fields[name] = {
                     "order": len(fields) + 1,
-                    "options": [{"code": "", "name": "Text", "type": "text"}] if ftype == "Text Input" else []
+                    "options": [{"type": "text", "code": "", "name": ""}] if ftype == "Text Input" else []
                 }
                 st.rerun()
 
@@ -294,32 +230,37 @@ def admin():
                 fields[r["Field"]]["order"] = int(r["Order"])
             st.rerun()
 
-        st.subheader("🛠️ Field Options")
+        st.subheader("✏️ Rename / Delete Field")
         field = st.selectbox("Select Field", ordered_fields(fields))
-        if st.button("🗑️ Delete Field"):
+        new_name = st.text_input("Rename Field To", value=field)
+        c1, c2 = st.columns(2)
+        if c1.button("Rename"):
+            if new_name and new_name not in fields:
+                fields[new_name] = fields.pop(field)
+                st.rerun()
+        if c2.button("Delete"):
             del fields[field]
             st.rerun()
 
+        st.subheader("🛠️ Field Options")
         opts = fields[field]["options"]
-        if opts and isinstance(opts[0], dict) and opts[0].get("type") == "text":
-            st.info("Text field")
+        if opts and opts[0].get("type") == "text":
+            st.info("Text input field")
         else:
-            df2 = normalize_options_df(opts)
+            df2 = normalize_option_df(opts)
             edited_df = st.data_editor(df2, num_rows="dynamic", hide_index=True)
             if st.button("Update Options"):
                 fields[field]["options"] = edited_df.to_dict("records")
 
+    # ---------- DATA I/O ----------
     with tab2:
         st.subheader("Export")
-        st.download_button("Download Config JSON",
+        st.download_button(
+            "Download Config JSON",
             json.dumps(st.session_state["sku_data"], indent=2),
             "sku_config.json",
             "application/json"
         )
-
-        if st.button("Generate Full Matrix CSV"):
-            df = generate_matrix()
-            st.download_button("Download Matrix.csv", df.to_csv(index=False), "matrix.csv", "text/csv")
 
         st.subheader("Import")
         f = st.file_uploader("Upload Config JSON", type=["json"])
@@ -328,11 +269,11 @@ def admin():
             st.rerun()
 
     if st.button("☁️ Save to Cloud"):
-        GithubStorage().save_data(st.session_state["sku_data"])
+        GithubStorage().save(st.session_state["sku_data"])
         go("home")
 
 # ==================================================
-# 8. ROUTER
+# ROUTER
 # ==================================================
 if st.session_state["page"] == "home":
     home()
