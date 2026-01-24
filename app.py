@@ -445,11 +445,17 @@ def home():
             opts = fields[f]["options"]
             is_text = opts and opts[0].get("type") == "text"
             if is_text:
-                text_val = st.text_input(f, help=f"Enter {f}")
+                text_val = st.text_input(f, help=f"Enter {f}", placeholder=f"Enter {f}", label_visibility="collapsed")
                 sel[f] = {"code": text_val, "name": text_val}
             else:
                 if opts:
-                    o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
+                    o = st.selectbox(
+                        f, 
+                        opts, 
+                        format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}", 
+                        help=f"Select {f}",
+                        label_visibility="collapsed"
+                    )
                     sel[f] = {"code": o["code"], "name": o["name"]}
     
     with divider_col:
