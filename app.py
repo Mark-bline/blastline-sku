@@ -405,11 +405,12 @@ def home():
             opts = fields[f]["options"]
             is_text = opts and opts[0].get("type") == "text"
             if is_text:
-                sel[f] = st.text_input(f, help=f"Enter {f}")
+                text_val = st.text_input(f, help=f"Enter {f}")
+                sel[f] = {"code": text_val, "name": text_val}
             else:
                 if opts:
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
-                    sel[f] = o["code"]
+                    sel[f] = {"code": o["code"], "name": o["name"]}
 
     with c2:
         st.subheader("Extras / Add-ons")
@@ -461,7 +462,7 @@ def home():
                 )
                 
                 if selected > 0 and extra_options[selected].get("code"):
-                    chosen.append(extra_options[selected]["code"])
+                    chosen.append({"code": extra_options[selected]["code"], "name": extra_options[selected]["name"]})
             else:
                 # Multiple selection with checkboxes (8x1 list)
                 for idx in range(len(page_extras)):
@@ -469,13 +470,19 @@ def home():
                     actual_idx = start_idx + idx
                     if st.checkbox(e["name"], key=f"extra_{actual_idx}", help=f"Add {e['name']} to SKU"):
                         if e.get("code"):
-                            chosen.append(e["code"])
+                            chosen.append({"code": e["code"], "name": e["name"]})
         else:
             st.info("No extras configured for this category")
 
     # Calculate SKU
-    base = sep.join([sel[k] for k in ordered_fields(fields) if sel.get(k)])
-    sku = base + (sep if base and chosen else "") + "".join(chosen)
+    base = sep.join([sel[k]["code"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["code"]])
+    extras_codes = "".join([c["code"] for c in chosen])
+    sku = base + (sep if base and extras_codes else "") + extras_codes
+    
+    # Build description string for breakdown
+    config_names = [sel[k]["name"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["name"]]
+    extras_names = [c["name"] for c in chosen]
+    sku_description = " + ".join(config_names + extras_names) if (config_names or extras_names) else ""
 
     st.markdown("---")
 
@@ -485,83 +492,74 @@ def home():
     with sku_col:
         st.markdown("#### Generate SKU")
         if sku:
-            # SKU Display Box - Dark theme with click to copy
-            st.markdown(
-                f"""
-                <div id="sku-box" onclick="copySKUText()" style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    background: #1a1a1a;
-                    border: 2px solid #4CAF50;
-                    border-radius: 12px;
-                    padding: 20px 25px;
-                    margin: 10px 0;
-                    cursor: pointer;
+            # SKU Display Box - Dark theme with click to copy using components.html
+            sku_html = f"""
+            <div id="sku-box" onclick="copySKUText()" style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: #1a1a1a;
+                border: 2px solid #4CAF50;
+                border-radius: 12px;
+                padding: 20px 25px;
+                margin: 10px 0;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            ">
+                <span id="sku-text" style="
+                    font-size: clamp(18px, 4vw, 32px);
+                    font-family: monospace;
+                    font-weight: 700;
+                    color: #4CAF50;
+                    letter-spacing: 1px;
+                ">{sku}</span>
+                <span id="copy-icon" style="
+                    background: #2d2d2d;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 12px 14px;
+                    font-size: 20px;
                     transition: all 0.3s ease;
-                ">
-                    <span id="sku-text" style="
-                        font-size: clamp(18px, 4vw, 32px);
-                        font-family: monospace;
-                        font-weight: 700;
-                        color: #4CAF50;
-                        letter-spacing: 1px;
-                    ">{sku}</span>
-                    <span id="copy-icon" style="
-                        background: #2d2d2d;
-                        border: none;
-                        border-radius: 8px;
-                        padding: 12px 14px;
-                        font-size: 20px;
-                        transition: all 0.3s ease;
-                    ">📋</span>
-                </div>
-                <div id="copy-notification" style="
-                    text-align: center;
-                    padding: 8px;
-                    color: #888;
-                    font-size: 14px;
-                    transition: all 0.3s ease;
-                ">Click to copy SKU</div>
-                
-                <script>
-                function copySKUText() {{
-                    navigator.clipboard.writeText("{sku}").then(function() {{
-                        // Update notification
-                        var notification = document.getElementById('copy-notification');
-                        notification.innerText = '✓ Copied to clipboard!';
-                        notification.style.color = '#4CAF50';
-                        
-                        // Update icon background
-                        var icon = document.getElementById('copy-icon');
-                        icon.style.background = '#4CAF50';
-                        icon.innerText = '✓';
-                        
-                        // Reset after 2 seconds
-                        setTimeout(function() {{
-                            notification.innerText = 'Click to copy SKU';
-                            notification.style.color = '#888';
-                            icon.style.background = '#2d2d2d';
-                            icon.innerText = '📋';
-                        }}, 2000);
-                    }});
-                }}
-                </script>
-                """,
-                unsafe_allow_html=True
-            )
+                ">📋</span>
+            </div>
+            <div id="copy-notification" style="
+                text-align: center;
+                padding: 8px;
+                color: #888;
+                font-size: 14px;
+                transition: all 0.3s ease;
+            ">Click to copy SKU</div>
             
-            # SKU Breakdown (collapsible)
+            <script>
+            function copySKUText() {{
+                navigator.clipboard.writeText("{sku}").then(function() {{
+                    // Update notification
+                    var notification = document.getElementById('copy-notification');
+                    notification.innerText = '✓ Copied to clipboard!';
+                    notification.style.color = '#4CAF50';
+                    
+                    // Update icon background
+                    var icon = document.getElementById('copy-icon');
+                    icon.style.background = '#4CAF50';
+                    icon.innerText = '✓';
+                    
+                    // Reset after 2 seconds
+                    setTimeout(function() {{
+                        notification.innerText = 'Click to copy SKU';
+                        notification.style.color = '#888';
+                        icon.style.background = '#2d2d2d';
+                        icon.innerText = '📋';
+                    }}, 2000);
+                }});
+            }}
+            </script>
+            """
+            st.components.v1.html(sku_html, height=140)
+            
+            # SKU Breakdown (collapsible) - Show description
             with st.expander("SKU Breakdown"):
-                st.write("**Base Configuration:**")
-                for f in ordered_fields(fields):
-                    if sel.get(f):
-                        st.write(f"- {f}: `{sel[f]}`")
-                if chosen:
-                    st.write("**Extras:**")
-                    for e in extras:
-                        if e.get("code") in chosen:
-                            st.write(f"- {e['name']}: `{e['code']}`")
+                if sku_description:
+                    st.markdown(f"**{sku_description}**")
         else:
             st.info("Select options to generate SKU")
     
