@@ -369,8 +369,14 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    st.title("Blastline SKU Configurator")
-    st.markdown("---")
+    # Header row: Title + Product Category on same line
+    header_col1, header_col2, header_col3 = st.columns([3, 1.5, 2.5])
+    
+    with header_col1:
+        st.markdown("<h1 style='margin-bottom: 0;'>Blastline SKU Configurator</h1>", unsafe_allow_html=True)
+    
+    with header_col2:
+        st.markdown("<p style='margin-top: 18px; margin-bottom: 0; font-weight: 600;'>Product Category</p>", unsafe_allow_html=True)
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
@@ -384,10 +390,8 @@ def home():
         )
         return
 
-    # Product Category with proper heading size and compact dropdown
-    st.subheader("Product Category")
-    cat_col, spacer_col = st.columns([2, 3])
-    with cat_col:
+    with header_col3:
+        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
         cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
     
     cat_data = inv[cat]
@@ -434,7 +438,8 @@ def home():
         </style>
     """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    # Add spacing after header
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
 
     # Configuration section with divider - better spacing ratio
     config_col, spacer1, divider_col, spacer2, extras_col = st.columns([8, 1, 0.2, 1, 8])
