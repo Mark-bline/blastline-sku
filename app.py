@@ -21,6 +21,30 @@ EXTRAS_PER_PAGE = 8
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
 # ==================================================
+# CUSTOM FONTS & STYLING
+# ==================================================
+st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
+        
+        /* Headings - Montserrat */
+        h1, h2, h3, h4, h5, h6, .stTitle, .stHeader {
+            font-family: 'Montserrat', Arial, sans-serif !important;
+        }
+        
+        /* Body text - Roboto */
+        body, p, span, div, label, .stMarkdown, .stText, .stSelectbox, .stRadio, .stCheckbox {
+            font-family: 'Roboto', Arial, sans-serif !important;
+        }
+        
+        /* Selectbox and input styling */
+        .stSelectbox > div > div, .stTextInput > div > div > input {
+            font-family: 'Roboto', Arial, sans-serif !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==================================================
 # GITHUB STORAGE
 # ==================================================
 class GithubStorage:
@@ -485,40 +509,69 @@ def home():
     with sku_col:
         st.markdown("#### Generate SKU")
         if sku:
-            # SKU Display Box with copy icon
+            # SKU Display Box - Dark theme with click to copy
             st.markdown(
                 f"""
-                <div style="
+                <div id="sku-box" onclick="copySKUText()" style="
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+                    background: #1a1a1a;
                     border: 2px solid #4CAF50;
                     border-radius: 12px;
                     padding: 20px 25px;
                     margin: 10px 0;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
                 ">
-                    <span style="
+                    <span id="sku-text" style="
                         font-size: clamp(18px, 4vw, 32px);
-                        font-family: 'Courier New', monospace;
+                        font-family: 'Roboto', Arial, sans-serif;
                         font-weight: 700;
-                        color: #1b5e20;
+                        color: #4CAF50;
                         letter-spacing: 1px;
                     ">{sku}</span>
-                    <button onclick="navigator.clipboard.writeText('{sku}').then(()=>{{this.innerHTML='✓';setTimeout(()=>this.innerHTML='📋',1500)}})" 
-                        style="
-                            background: #4CAF50;
-                            border: none;
-                            border-radius: 8px;
-                            padding: 12px 14px;
-                            cursor: pointer;
-                            font-size: 20px;
-                            transition: transform 0.2s;
-                        "
-                        onmouseover="this.style.transform='scale(1.1)'"
-                        onmouseout="this.style.transform='scale(1)'"
-                        title="Copy SKU">📋</button>
+                    <span id="copy-icon" style="
+                        background: #2d2d2d;
+                        border: none;
+                        border-radius: 8px;
+                        padding: 12px 14px;
+                        font-size: 20px;
+                        transition: all 0.3s ease;
+                    ">📋</span>
                 </div>
+                <div id="copy-notification" style="
+                    text-align: center;
+                    padding: 8px;
+                    color: #888;
+                    font-family: 'Roboto', Arial, sans-serif;
+                    font-size: 14px;
+                    transition: all 0.3s ease;
+                ">Click to copy SKU</div>
+                
+                <script>
+                function copySKUText() {{
+                    navigator.clipboard.writeText("{sku}").then(function() {{
+                        // Update notification
+                        var notification = document.getElementById('copy-notification');
+                        notification.innerText = '✓ Copied to clipboard!';
+                        notification.style.color = '#4CAF50';
+                        
+                        // Update icon background
+                        var icon = document.getElementById('copy-icon');
+                        icon.style.background = '#4CAF50';
+                        icon.innerText = '✓';
+                        
+                        // Reset after 2 seconds
+                        setTimeout(function() {{
+                            notification.innerText = 'Click to copy SKU';
+                            notification.style.color = '#888';
+                            icon.style.background = '#2d2d2d';
+                            icon.innerText = '📋';
+                        }}, 2000);
+                    }});
+                }}
+                </script>
                 """,
                 unsafe_allow_html=True
             )
@@ -560,7 +613,7 @@ def home():
                             color: #333;
                             margin-top: 10px;
                             margin-bottom: 0;
-                            font-family: 'Courier New', monospace;
+                            font-family: 'Roboto', Arial, sans-serif;
                             font-size: 12px;
                             font-weight: 600;
                         ">{sku}</p>
@@ -570,14 +623,14 @@ def home():
                 )
             
             with qr_inner_col2:
-                # Action buttons
+                # Action buttons - Only PNG and SVG download
                 st.markdown("<div style='padding-top: 10px;'>", unsafe_allow_html=True)
                 
                 # Download PNG
                 qr_buffer_png = generate_qr_code(sku, size=300)
                 col_label, col_btn = st.columns([3, 1])
                 with col_label:
-                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download PNG</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='margin: 8px 0; color: #555; font-family: Roboto, Arial, sans-serif;'>Download PNG</p>", unsafe_allow_html=True)
                 with col_btn:
                     st.download_button(
                         label="⬇️",
@@ -591,7 +644,7 @@ def home():
                 svg_content = generate_qr_svg(sku)
                 col_label2, col_btn2 = st.columns([3, 1])
                 with col_label2:
-                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download SVG</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='margin: 8px 0; color: #555; font-family: Roboto, Arial, sans-serif;'>Download SVG</p>", unsafe_allow_html=True)
                 with col_btn2:
                     st.download_button(
                         label="⬇️",
@@ -599,32 +652,6 @@ def home():
                         file_name=f"{sku}_QR.svg",
                         mime="image/svg+xml",
                         key="download_svg"
-                    )
-                
-                # Copy Image
-                col_label3, col_btn3 = st.columns([3, 1])
-                with col_label3:
-                    st.markdown("<p style='margin: 8px 0; color: #555;'>Copy Image</p>", unsafe_allow_html=True)
-                with col_btn3:
-                    st.markdown(
-                        f"""
-                        <button onclick="
-                            fetch('data:image/png;base64,{qr_base64}')
-                            .then(res => res.blob())
-                            .then(blob => navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]))
-                            .then(() => this.innerHTML='✓')
-                            .catch(() => this.innerHTML='✗');
-                            setTimeout(()=>this.innerHTML='📋', 1500);
-                        " style="
-                            background: #f5f5f5;
-                            border: 1px solid #ddd;
-                            border-radius: 6px;
-                            padding: 6px 12px;
-                            cursor: pointer;
-                            font-size: 16px;
-                        " title="Copy QR Code to clipboard">📋</button>
-                        """,
-                        unsafe_allow_html=True
                     )
                 
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -638,6 +665,7 @@ def home():
                     padding: 40px;
                     text-align: center;
                     color: #999;
+                    font-family: 'Roboto', Arial, sans-serif;
                 ">
                     QR Code will appear here
                 </div>
