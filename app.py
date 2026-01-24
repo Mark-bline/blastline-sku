@@ -489,8 +489,8 @@ def home():
 
     st.markdown("---")
 
-    # Results Section - Two columns: SKU Display and QR Code
-    sku_col, qr_col = st.columns([1, 1])
+    # Results Section - Two columns with divider: SKU Display and QR Code
+    sku_col, divider_col, qr_col = st.columns([10, 1, 10])
     
     with sku_col:
         st.markdown("#### Generate SKU")
@@ -566,9 +566,23 @@ def home():
         else:
             st.info("Select options to generate SKU")
     
+    with divider_col:
+        # Vertical divider
+        st.markdown(
+            """
+            <div style="
+                border-left: 2px solid #e0e0e0;
+                height: 250px;
+                margin: 0 auto;
+            "></div>
+            """,
+            unsafe_allow_html=True
+        )
+    
     with qr_col:
         st.markdown("#### Generate SKU QR Code")
         if sku:
+            # QR Code and download buttons in a clean layout
             qr_inner_col1, qr_inner_col2 = st.columns([1, 1])
             
             with qr_inner_col1:
@@ -599,38 +613,32 @@ def home():
                 )
             
             with qr_inner_col2:
-                # Action buttons - Only PNG and SVG download
-                st.markdown("<div style='padding-top: 10px;'>", unsafe_allow_html=True)
+                # Download buttons with proper alignment
+                st.markdown("<div style='padding-top: 20px;'></div>", unsafe_allow_html=True)
                 
                 # Download PNG
                 qr_buffer_png = generate_qr_code(sku, size=300)
-                col_label, col_btn = st.columns([3, 1])
-                with col_label:
-                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download PNG</p>", unsafe_allow_html=True)
-                with col_btn:
-                    st.download_button(
-                        label="⬇️",
-                        data=qr_buffer_png,
-                        file_name=f"{sku}_QR.png",
-                        mime="image/png",
-                        key="download_png"
-                    )
+                st.download_button(
+                    label="⬇️ Download PNG",
+                    data=qr_buffer_png,
+                    file_name=f"{sku}_QR.png",
+                    mime="image/png",
+                    key="download_png",
+                    use_container_width=True
+                )
+                
+                st.markdown("<div style='padding-top: 10px;'></div>", unsafe_allow_html=True)
                 
                 # Download SVG
                 svg_content = generate_qr_svg(sku)
-                col_label2, col_btn2 = st.columns([3, 1])
-                with col_label2:
-                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download SVG</p>", unsafe_allow_html=True)
-                with col_btn2:
-                    st.download_button(
-                        label="⬇️",
-                        data=svg_content,
-                        file_name=f"{sku}_QR.svg",
-                        mime="image/svg+xml",
-                        key="download_svg"
-                    )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.download_button(
+                    label="⬇️ Download SVG",
+                    data=svg_content,
+                    file_name=f"{sku}_QR.svg",
+                    mime="image/svg+xml",
+                    key="download_svg",
+                    use_container_width=True
+                )
         else:
             st.markdown(
                 """
@@ -885,7 +893,7 @@ def admin():
         cat_data = inv[cat]
         settings = cat_data.get("settings", {})
         
-        with st.expander("⚙️ Category Settings", expanded=False):
+        with st.expander("🔧 SKU Format Options", expanded=False):
             col1, col2 = st.columns(2)
             
             with col1:
