@@ -396,10 +396,43 @@ def home():
     sel = {}
     chosen = []
 
-    # Configuration section in 2 columns
-    c1, c2 = st.columns([1, 1])
+    # Add responsive divider CSS
+    st.markdown("""
+        <style>
+        /* Vertical divider for desktop */
+        .vertical-divider {
+            border-left: 2px solid #e0e0e0;
+            height: 100%;
+            min-height: 300px;
+            margin: 0 auto;
+        }
+        
+        /* Hide vertical divider on mobile, show horizontal */
+        @media (max-width: 768px) {
+            .vertical-divider {
+                display: none;
+            }
+            .mobile-divider {
+                display: block !important;
+                border-top: 2px solid #e0e0e0;
+                margin: 20px 0;
+                width: 100%;
+            }
+        }
+        
+        /* Desktop: hide mobile divider */
+        @media (min-width: 769px) {
+            .mobile-divider {
+                display: none;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    with c1:
+    # Configuration section with divider
+    config_col, divider_col, extras_col = st.columns([10, 1, 10])
+
+    with config_col:
         st.subheader("Configuration")
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
@@ -411,8 +444,11 @@ def home():
                 if opts:
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = {"code": o["code"], "name": o["name"]}
+    
+    with divider_col:
+        st.markdown('<div class="vertical-divider"></div>', unsafe_allow_html=True)
 
-    with c2:
+    with extras_col:
         st.subheader("Extras / Add-ons")
         
         if extras:
@@ -567,17 +603,8 @@ def home():
             st.info("Select options to generate SKU")
     
     with divider_col:
-        # Vertical divider
-        st.markdown(
-            """
-            <div style="
-                border-left: 2px solid #e0e0e0;
-                height: 250px;
-                margin: 0 auto;
-            "></div>
-            """,
-            unsafe_allow_html=True
-        )
+        # Vertical divider using responsive CSS class
+        st.markdown('<div class="vertical-divider"></div>', unsafe_allow_html=True)
     
     with qr_col:
         st.markdown("#### Generate SKU QR Code")
