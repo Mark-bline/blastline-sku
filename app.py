@@ -21,41 +21,6 @@ EXTRAS_PER_PAGE = 8
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
 # ==================================================
-# CUSTOM FONTS & STYLING
-# ==================================================
-st.markdown("""
-    <style>
-        /* Load Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
-        
-        /* Load Material Icons for Streamlit's built-in icons */
-        @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
-        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
-        
-        /* Headings - Montserrat */
-        h1, h2, h3, h4, h5, h6, .stTitle, .stHeader {
-            font-family: 'Montserrat', Arial, sans-serif !important;
-        }
-        
-        /* Body text - Roboto */
-        body, p, span, div, label, .stMarkdown, .stText, .stSelectbox, .stRadio, .stCheckbox {
-            font-family: 'Roboto', Arial, sans-serif !important;
-        }
-        
-        /* Selectbox and input styling */
-        .stSelectbox > div > div, .stTextInput > div > div > input {
-            font-family: 'Roboto', Arial, sans-serif !important;
-        }
-        
-        /* Fix for Material Symbols used by Streamlit */
-        .material-symbols-rounded, .material-symbols-outlined {
-            font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# ==================================================
 # GITHUB STORAGE
 # ==================================================
 class GithubStorage:
@@ -537,7 +502,7 @@ def home():
                 ">
                     <span id="sku-text" style="
                         font-size: clamp(18px, 4vw, 32px);
-                        font-family: 'Roboto', Arial, sans-serif;
+                        font-family: monospace;
                         font-weight: 700;
                         color: #4CAF50;
                         letter-spacing: 1px;
@@ -555,7 +520,6 @@ def home():
                     text-align: center;
                     padding: 8px;
                     color: #888;
-                    font-family: 'Roboto', Arial, sans-serif;
                     font-size: 14px;
                     transition: all 0.3s ease;
                 ">Click to copy SKU</div>
@@ -624,7 +588,7 @@ def home():
                             color: #333;
                             margin-top: 10px;
                             margin-bottom: 0;
-                            font-family: 'Roboto', Arial, sans-serif;
+                            font-family: monospace;
                             font-size: 12px;
                             font-weight: 600;
                         ">{sku}</p>
@@ -641,7 +605,7 @@ def home():
                 qr_buffer_png = generate_qr_code(sku, size=300)
                 col_label, col_btn = st.columns([3, 1])
                 with col_label:
-                    st.markdown("<p style='margin: 8px 0; color: #555; font-family: Roboto, Arial, sans-serif;'>Download PNG</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download PNG</p>", unsafe_allow_html=True)
                 with col_btn:
                     st.download_button(
                         label="⬇️",
@@ -655,7 +619,7 @@ def home():
                 svg_content = generate_qr_svg(sku)
                 col_label2, col_btn2 = st.columns([3, 1])
                 with col_label2:
-                    st.markdown("<p style='margin: 8px 0; color: #555; font-family: Roboto, Arial, sans-serif;'>Download SVG</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='margin: 8px 0; color: #555;'>Download SVG</p>", unsafe_allow_html=True)
                 with col_btn2:
                     st.download_button(
                         label="⬇️",
@@ -676,7 +640,6 @@ def home():
                     padding: 40px;
                     text-align: center;
                     color: #999;
-                    font-family: 'Roboto', Arial, sans-serif;
                 ">
                     QR Code will appear here
                 </div>
