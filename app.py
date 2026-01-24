@@ -482,7 +482,10 @@ def home():
     # Build description string for breakdown
     config_names = [sel[k]["name"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["name"]]
     extras_names = [c["name"] for c in chosen]
-    sku_description = " + ".join(config_names + extras_names) if (config_names or extras_names) else ""
+    all_names = config_names + extras_names
+    
+    # Format: All items separated by dash
+    sku_description = " - ".join(all_names) if all_names else ""
 
     st.markdown("---")
 
