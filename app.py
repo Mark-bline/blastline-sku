@@ -25,7 +25,13 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 # ==================================================
 st.markdown("""
     <style>
+        /* Load Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
+        
+        /* Load Material Icons for Streamlit's built-in icons */
+        @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded');
         
         /* Headings - Montserrat */
         h1, h2, h3, h4, h5, h6, .stTitle, .stHeader {
@@ -40,6 +46,11 @@ st.markdown("""
         /* Selectbox and input styling */
         .stSelectbox > div > div, .stTextInput > div > div > input {
             font-family: 'Roboto', Arial, sans-serif !important;
+        }
+        
+        /* Fix for Material Symbols used by Streamlit */
+        .material-symbols-rounded, .material-symbols-outlined {
+            font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -687,12 +698,13 @@ def home():
 # ==================================================
 def login():
     """Admin login page."""
-    st.subheader("Admin Login")
     
     # Center the login form
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
+        st.markdown("<h3 style='text-align: center; font-family: Montserrat, Arial, sans-serif;'>Admin Login</h3>", unsafe_allow_html=True)
+        st.markdown("")
         pw = st.text_input("Password", type="password")
         
         c1, c2 = st.columns(2)
@@ -781,91 +793,92 @@ def admin():
         normalize_fields(cat_data)
         fields = cat_data["fields"]
 
-        st.subheader("➕ Add Field")
-        with st.form("add_field"):
-            a, b, c = st.columns([2, 1, 1])
-            name = a.text_input("Field Name")
-            ftype = c.selectbox("Type", ["Dropdown", "Text Input"])
-            if b.form_submit_button("Add") and name:
-                if name in fields:
-                    show_error(f"Field '{name}' already exists!")
-                else:
-                    fields[name] = {
-                        "order": len(fields) + 1,
-                        "options": [{"type": "text", "code": "", "name": ""}] if ftype == "Text Input" else []
-                    }
-                    show_success(f"Field '{name}' added successfully!")
-                    st.rerun()
+        # Add Field - Collapsible
+        with st.expander("➕ Add Field", expanded=False):
+            with st.form("add_field"):
+                a, b, c = st.columns([2, 1, 1])
+                name = a.text_input("Field Name")
+                ftype = c.selectbox("Type", ["Dropdown", "Text Input"])
+                if b.form_submit_button("Add") and name:
+                    if name in fields:
+                        show_error(f"Field '{name}' already exists!")
+                    else:
+                        fields[name] = {
+                            "order": len(fields) + 1,
+                            "options": [{"type": "text", "code": "", "name": ""}] if ftype == "Text Input" else []
+                        }
+                        show_success(f"Field '{name}' added successfully!")
+                        st.rerun()
 
         if fields:
-            st.subheader("🔀 Field Order")
-            df = pd.DataFrame([{"Field": k, "Order": v["order"]} for k, v in fields.items()])
-            edited = st.data_editor(df, hide_index=True, use_container_width=True)
-            
-            col1, col2, col3 = st.columns([1, 3, 1])
-            with col1:
+            # Field Order - Collapsible
+            with st.expander("🔀 Field Order", expanded=False):
+                df = pd.DataFrame([{"Field": k, "Order": v["order"]} for k, v in fields.items()])
+                edited = st.data_editor(df, hide_index=True, use_container_width=True)
+                
                 if st.button("Apply Field Order"):
                     for _, r in edited.iterrows():
                         fields[r["Field"]]["order"] = int(r["Order"])
                     show_success("Field order updated successfully!")
                     st.rerun()
 
-            st.subheader("✏️ Rename / Delete Field")
-            field = st.selectbox("Select Field", ordered_fields(fields))
-            new_name = st.text_input("Rename Field To", value=field)
-            
-            # Delete Field with confirmation
-            if st.session_state.get("confirm_delete_field") == field:
-                st.warning(f"⚠️ Are you sure you want to delete field '{field}'? This cannot be undone!")
-                col1, col2, col3 = st.columns([1, 1, 2])
-                with col1:
-                    if st.button("✓ Yes, Delete", type="primary", key="confirm_delete_field_btn"):
-                        del fields[field]
-                        st.session_state["confirm_delete_field"] = None
-                        show_success(f"Field '{field}' deleted successfully!")
+            # Rename / Delete Field - Collapsible
+            with st.expander("✏️ Rename / Delete Field", expanded=False):
+                field = st.selectbox("Select Field", ordered_fields(fields))
+                new_name = st.text_input("Rename Field To", value=field)
+                
+                # Delete Field with confirmation
+                if st.session_state.get("confirm_delete_field") == field:
+                    st.warning(f"⚠️ Are you sure you want to delete field '{field}'? This cannot be undone!")
+                    col1, col2, col3 = st.columns([1, 1, 2])
+                    with col1:
+                        if st.button("✓ Yes, Delete", type="primary", key="confirm_delete_field_btn"):
+                            del fields[field]
+                            st.session_state["confirm_delete_field"] = None
+                            show_success(f"Field '{field}' deleted successfully!")
+                            st.rerun()
+                    with col2:
+                        if st.button("✗ Cancel", key="cancel_delete_field_btn"):
+                            st.session_state["confirm_delete_field"] = None
+                            st.rerun()
+                else:
+                    c1, c2 = st.columns(2)
+                    if c1.button("Rename", use_container_width=True):
+                        if new_name == field:
+                            show_info("Field name unchanged.")
+                        elif new_name and new_name not in fields:
+                            fields[new_name] = fields.pop(field)
+                            show_success(f"Field renamed from '{field}' to '{new_name}'")
+                            st.rerun()
+                        elif new_name in fields:
+                            show_error(f"Field '{new_name}' already exists!")
+                            
+                    if c2.button("Delete", use_container_width=True):
+                        st.session_state["confirm_delete_field"] = field
                         st.rerun()
-                with col2:
-                    if st.button("✗ Cancel", key="cancel_delete_field_btn"):
-                        st.session_state["confirm_delete_field"] = None
-                        st.rerun()
-            else:
-                c1, c2 = st.columns(2)
-                if c1.button("Rename", use_container_width=True):
-                    if new_name == field:
-                        show_info("Field name unchanged.")
-                    elif new_name and new_name not in fields:
-                        fields[new_name] = fields.pop(field)
-                        show_success(f"Field renamed from '{field}' to '{new_name}'")
-                        st.rerun()
-                    elif new_name in fields:
-                        show_error(f"Field '{new_name}' already exists!")
-                        
-                if c2.button("Delete", use_container_width=True):
-                    st.session_state["confirm_delete_field"] = field
-                    st.rerun()
 
-            st.subheader("🛠️ Field Options")
-            opts = fields[field]["options"]
-            if opts and opts[0].get("type") == "text":
-                st.info("This is a text input field - users will enter values manually.")
-            else:
-                df2 = normalize_option_df(opts)
-                edited_df = st.data_editor(
-                    df2, 
-                    num_rows="dynamic", 
-                    hide_index=True,
-                    use_container_width=True,
-                    column_config={
-                        "code": st.column_config.TextColumn("Code", help="SKU code segment"),
-                        "name": st.column_config.TextColumn("Name", help="Display name"),
-                        "order": st.column_config.NumberColumn("Order", help="Display order")
-                    }
-                )
-                col1, col2, col3 = st.columns([1, 3, 1])
-                with col1:
+            # Field Options - Collapsible
+            with st.expander("🛠️ Field Options", expanded=False):
+                field_for_options = st.selectbox("Select Field to Edit Options", ordered_fields(fields), key="field_options_select")
+                opts = fields[field_for_options]["options"]
+                if opts and opts[0].get("type") == "text":
+                    st.info("This is a text input field - users will enter values manually.")
+                else:
+                    df2 = normalize_option_df(opts)
+                    edited_df = st.data_editor(
+                        df2, 
+                        num_rows="dynamic", 
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "code": st.column_config.TextColumn("Code", help="SKU code segment"),
+                            "name": st.column_config.TextColumn("Name", help="Display name"),
+                            "order": st.column_config.NumberColumn("Order", help="Display order")
+                        }
+                    )
                     if st.button("Update Options"):
-                        fields[field]["options"] = edited_df.to_dict("records")
-                        show_success(f"Options for '{field}' updated successfully!")
+                        fields[field_for_options]["options"] = edited_df.to_dict("records")
+                        show_success(f"Options for '{field_for_options}' updated successfully!")
                         st.rerun()
         else:
             st.info("No fields configured yet. Add a field above to get started.")
@@ -875,70 +888,64 @@ def admin():
         cat_data = inv[cat]
         extras = cat_data.get("extras", [])
         
-        st.subheader("🎁 Manage Extras / Add-ons")
-        st.info(f"Extras will be displayed as a list (8 per page) in the configurator with pagination controls.")
-        
-        extras_df = normalize_extras_df(extras)
-        edited_extras = st.data_editor(
-            extras_df,
-            num_rows="dynamic",
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "code": st.column_config.TextColumn("Code", help="SKU code for this extra (will be appended to SKU)"),
-                "name": st.column_config.TextColumn("Name", help="Display name shown to users"),
-                "order": st.column_config.NumberColumn("Order", help="Display order (lower numbers appear first)")
-            }
-        )
-        
-        col1, col2, col3 = st.columns([1, 3, 1])
-        with col1:
+        with st.expander("🎁 Manage Extras / Add-ons", expanded=False):
+            st.info(f"Extras will be displayed as a list (8 per page) in the configurator with pagination controls.")
+            
+            extras_df = normalize_extras_df(extras)
+            edited_extras = st.data_editor(
+                extras_df,
+                num_rows="dynamic",
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "code": st.column_config.TextColumn("Code", help="SKU code for this extra (will be appended to SKU)"),
+                    "name": st.column_config.TextColumn("Name", help="Display name shown to users"),
+                    "order": st.column_config.NumberColumn("Order", help="Display order (lower numbers appear first)")
+                }
+            )
+            
             if st.button("💾 Save Extras", type="primary"):
                 cat_data["extras"] = edited_extras.to_dict("records")
                 show_success(f"Extras updated successfully! Total: {len(edited_extras)}")
                 st.rerun()
         
         if len(extras) > 0:
-            st.markdown("---")
-            st.subheader("Preview")
-            st.write(f"**Total Extras:** {len(extras)}")
-            total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
-            st.write(f"**Pages in Configurator:** {total_pages}")
-            st.write(f"**Layout:** 8 items per page")
+            with st.expander("📋 Preview", expanded=False):
+                st.write(f"**Total Extras:** {len(extras)}")
+                total_pages = (len(extras) - 1) // EXTRAS_PER_PAGE + 1 if len(extras) > 0 else 1
+                st.write(f"**Pages in Configurator:** {total_pages}")
+                st.write(f"**Layout:** 8 items per page")
 
     # ---------- CATEGORY SETTINGS ----------
     with tab3:
         cat_data = inv[cat]
         settings = cat_data.get("settings", {})
         
-        st.subheader("⚙️ Category Settings")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("##### SKU Separator")
-            separator = st.text_input(
-                "Separator Character",
-                value=settings.get("separator", DEFAULT_SEPARATOR),
-                help="Character used to separate SKU components",
-                max_chars=5,
-                key="separator_input"
-            )
-        
-        with col2:
-            st.markdown("##### Extras Selection Mode")
-            extras_mode_setting = st.radio(
-                "Allow users to select:",
-                options=["Single", "Multiple"],
-                index=0 if settings.get("extras_mode", DEFAULT_EXTRAS_MODE) == "Single" else 1,
-                help="Single: Users can select only one extra (radio buttons)\nMultiple: Users can select multiple extras (checkboxes)",
-                key="extras_mode_input"
-            )
-        
-        st.markdown("---")
-        
-        col1, col2, col3 = st.columns([1, 3, 1])
-        with col1:
+        with st.expander("⚙️ Category Settings", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("##### SKU Separator")
+                separator = st.text_input(
+                    "Separator Character",
+                    value=settings.get("separator", DEFAULT_SEPARATOR),
+                    help="Character used to separate SKU components",
+                    max_chars=5,
+                    key="separator_input"
+                )
+            
+            with col2:
+                st.markdown("##### Extras Selection Mode")
+                extras_mode_setting = st.radio(
+                    "Allow users to select:",
+                    options=["Single", "Multiple"],
+                    index=0 if settings.get("extras_mode", DEFAULT_EXTRAS_MODE) == "Single" else 1,
+                    help="Single: Users can select only one extra (radio buttons)\nMultiple: Users can select multiple extras (checkboxes)",
+                    key="extras_mode_input"
+                )
+            
+            st.markdown("---")
+            
             if st.button("💾 Save Settings", type="primary"):
                 settings["separator"] = separator
                 settings["extras_mode"] = extras_mode_setting
@@ -946,59 +953,54 @@ def admin():
                 show_success("Category settings saved successfully!")
                 st.rerun()
         
-        st.markdown("---")
-        st.subheader("Current Settings Preview")
-        st.write(f"**Separator:** `{separator}`")
-        st.write(f"**Extras Mode:** {extras_mode_setting}")
-        if extras_mode_setting == "Single":
-            st.info("ℹ️ Users will see radio buttons to select one extra at a time")
-        else:
-            st.info("ℹ️ Users will see checkboxes to select multiple extras")
+        with st.expander("📋 Current Settings Preview", expanded=False):
+            st.write(f"**Separator:** `{settings.get('separator', DEFAULT_SEPARATOR)}`")
+            st.write(f"**Extras Mode:** {settings.get('extras_mode', DEFAULT_EXTRAS_MODE)}")
+            if settings.get('extras_mode', DEFAULT_EXTRAS_MODE) == "Single":
+                st.info("ℹ️ Users will see radio buttons to select one extra at a time")
+            else:
+                st.info("ℹ️ Users will see checkboxes to select multiple extras")
 
     # ---------- EXPORT MATRIX ----------
     with tab4:
-        st.subheader("📊 Full Matrix SKU Export")
-        st.write("Generate a CSV file containing all possible SKU combinations for this category.")
-        
         cat_data = inv[cat]
         normalize_fields(cat_data)
         
-        if cat_data["fields"]:
-            # Preview count
-            field_combos = []
-            for f in ordered_fields(cat_data["fields"]):
-                opts = cat_data["fields"][f]["options"]
-                is_text = opts and opts[0].get("type") == "text"
-                if not is_text and opts:
-                    field_combos.append(len(opts))
+        with st.expander("📊 Full Matrix SKU Export", expanded=False):
+            st.write("Generate a CSV file containing all possible SKU combinations for this category.")
             
-            if field_combos:
-                total_combinations = 1
-                for count in field_combos:
-                    total_combinations *= count
+            if cat_data["fields"]:
+                # Preview count
+                field_combos = []
+                for f in ordered_fields(cat_data["fields"]):
+                    opts = cat_data["fields"][f]["options"]
+                    is_text = opts and opts[0].get("type") == "text"
+                    if not is_text and opts:
+                        field_combos.append(len(opts))
                 
-                st.info(f"This will generate **{total_combinations:,}** SKU combinations")
-                
-                col1, col2, col3 = st.columns([1, 3, 1])
-                with col1:
+                if field_combos:
+                    total_combinations = 1
+                    for count in field_combos:
+                        total_combinations *= count
+                    
+                    st.info(f"This will generate **{total_combinations:,}** SKU combinations")
+                    
                     if st.button("🔄 Generate Matrix"):
                         with st.spinner("Generating SKU matrix..."):
                             matrix_df = generate_full_matrix(cat_data)
                             st.session_state["matrix_preview"] = matrix_df
                             show_success(f"Generated {len(matrix_df):,} SKU combinations!")
                             st.rerun()
-                
-                if "matrix_preview" in st.session_state:
-                    st.markdown("---")
-                    st.subheader("Preview")
-                    st.dataframe(st.session_state["matrix_preview"].head(50), use_container_width=True)
-                    if len(st.session_state["matrix_preview"]) > 50:
-                        st.caption(f"Showing first 50 of {len(st.session_state['matrix_preview']):,} rows")
                     
-                    csv = st.session_state["matrix_preview"].to_csv(index=False)
-                    
-                    col1, col2, col3 = st.columns([1, 3, 1])
-                    with col1:
+                    if "matrix_preview" in st.session_state:
+                        st.markdown("---")
+                        st.write("**Preview:**")
+                        st.dataframe(st.session_state["matrix_preview"].head(50), use_container_width=True)
+                        if len(st.session_state["matrix_preview"]) > 50:
+                            st.caption(f"Showing first 50 of {len(st.session_state['matrix_preview']):,} rows")
+                        
+                        csv = st.session_state["matrix_preview"].to_csv(index=False)
+                        
                         st.download_button(
                             "📥 Download CSV",
                             csv,
@@ -1006,10 +1008,10 @@ def admin():
                             "text/csv",
                             type="primary"
                         )
+                else:
+                    st.warning("No dropdown fields configured. Text input fields are excluded from matrix generation.")
             else:
-                st.warning("No dropdown fields configured. Text input fields are excluded from matrix generation.")
-        else:
-            st.warning("No fields configured yet. Add fields in the Fields Configuration tab.")
+                st.warning("No fields configured yet. Add fields in the Fields Configuration tab.")
 
     st.markdown("---")
     
