@@ -354,17 +354,8 @@ def home():
     sel = {}
     chosen = []
 
-    # Generated SKU section at top
-    st.subheader("Generated SKU")
-    
-    # Placeholders for SKU display
-    sku_placeholder = st.empty()
-    breakdown_placeholder = st.empty()
-    
-    st.markdown("---")
-
-    # Configuration section in 2 columns with visual separation
-    c1, separator_col, c2 = st.columns([5, 0.5, 5])
+    # Configuration section in 2 columns
+    c1, c2 = st.columns([1, 1])
 
     with c1:
         st.subheader("Configuration")
@@ -377,16 +368,6 @@ def home():
                 if opts:
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = o["code"]
-    
-    with separator_col:
-        # Vertical separator line
-        st.markdown("""
-        <div style="
-            height: 100%;
-            border-left: 2px solid #e0e0e0;
-            margin: 0 auto;
-        "></div>
-        """, unsafe_allow_html=True)
 
     with c2:
         st.subheader("Extras / Add-ons")
@@ -450,74 +431,87 @@ def home():
         else:
             st.info("No extras configured for this category")
 
-    # Now calculate and display the SKU at the top
+    # Calculate SKU
     base = sep.join([sel[k] for k in ordered_fields(fields) if sel.get(k)])
     sku = base + (sep if base and chosen else "") + "".join(chosen)
 
-    with sku_placeholder.container():
-        if sku:
-            st.components.v1.html(big_copy_box(sku), height=COPY_BOX_HEIGHT)
-        else:
-            st.info("Select options to generate SKU")
+    st.markdown("---")
+
+    # Results Section - SKU Display and QR Code
+    st.subheader("Generated SKU")
     
-    with breakdown_placeholder.container():
-        if sku:
-            # Show SKU breakdown
-            with st.expander("SKU Breakdown"):
-                st.write("**Base Configuration:**")
-                for f in ordered_fields(fields):
-                    if sel.get(f):
-                        st.write(f"- {f}: `{sel[f]}`")
-                if chosen:
-                    st.write("**Extras:**")
-                    for e in extras:
-                        if e.get("code") in chosen:
-                            st.write(f"- {e['name']}: `{e['code']}`")
-            
-            # QR Code Generator Section
-            with st.expander("📱 QR Code Generator"):
-                qr_col1, qr_col2 = st.columns([1, 1])
-                
-                with qr_col1:
-                    # Generate and display QR code
-                    qr_base64 = get_qr_code_base64(sku)
-                    st.markdown(
-                        f"""
-                        <div style="text-align: center; padding: 20px; background: white; border-radius: 10px;">
-                            <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="max-width: 200px;">
-                            <p style="color: #333; margin-top: 10px; font-family: monospace; font-size: 12px;">{sku}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                
-                with qr_col2:
-                    st.markdown("##### Download Options")
-                    
-                    # Download button
-                    qr_buffer = generate_qr_code(sku, size=300)
-                    st.download_button(
-                        label="📥 Download QR Code",
-                        data=qr_buffer,
-                        file_name=f"SKU_{sku.replace('-', '_')}_QR.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
-                    
-                    st.markdown("---")
-                    st.markdown("##### Copy QR Code")
-                    st.markdown(
-                        f"""
-                        <p style="font-size: 12px; color: #666;">
-                            Right-click on the QR code image and select "Copy image" to copy to clipboard.
-                        </p>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                    st.markdown("---")
-                    st.markdown("##### SKU Text")
-                    st.code(sku, language=None)
+    if sku:
+        # SKU Display Box
+        st.components.v1.html(big_copy_box(sku), height=COPY_BOX_HEIGHT)
+        
+        # QR Code with 3 simple icon buttons
+        st.markdown("")
+        qr_col1, qr_col2, qr_col3, qr_col4 = st.columns([2, 1, 1, 1])
+        
+        with qr_col1:
+            # QR Code Image
+            qr_base64 = get_qr_code_base64(sku)
+            st.markdown(
+                f"""
+                <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block;">
+                    <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="width: 100px; height: 100px;">
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        with qr_col2:
+            # Download QR Code
+            qr_buffer = generate_qr_code(sku, size=300)
+            st.download_button(
+                label="📥",
+                data=qr_buffer,
+                file_name=f"SKU_{sku.replace('-', '_')}_QR.png",
+                mime="image/png",
+                help="Download QR Code",
+                use_container_width=True
+            )
+        
+        with qr_col3:
+            # Copy QR Code (as base64 data URL)
+            qr_data_url = f"data:image/png;base64,{qr_base64}"
+            st.markdown(
+                f"""
+                <button onclick="navigator.clipboard.writeText('{qr_data_url}').then(()=>this.innerText='✓').catch(()=>this.innerText='✗')" 
+                style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#fafafa;cursor:pointer;font-size:16px;"
+                title="Copy QR Code as Data URL">
+                🖼️
+                </button>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        with qr_col4:
+            # Copy SKU Text
+            st.markdown(
+                f"""
+                <button onclick="navigator.clipboard.writeText('{sku}').then(()=>this.innerText='✓').catch(()=>this.innerText='✗')" 
+                style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#fafafa;cursor:pointer;font-size:16px;"
+                title="Copy SKU Text">
+                📋
+                </button>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        # SKU Breakdown (collapsible)
+        with st.expander("SKU Breakdown"):
+            st.write("**Base Configuration:**")
+            for f in ordered_fields(fields):
+                if sel.get(f):
+                    st.write(f"- {f}: `{sel[f]}`")
+            if chosen:
+                st.write("**Extras:**")
+                for e in extras:
+                    if e.get("code") in chosen:
+                        st.write(f"- {e['name']}: `{e['code']}`")
+    else:
+        st.info("Select options to generate SKU")
     
     # Footer
     st.markdown("---")
