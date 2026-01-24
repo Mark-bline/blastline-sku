@@ -369,14 +369,31 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
+    # Custom CSS for polished layout
+    st.markdown("""
+        <style>
+        /* Vertical divider */
+        .divider-line {
+            width: 2px;
+            background-color: #e0e0e0;
+            min-height: 300px;
+            margin: 0 auto;
+        }
+        
+        /* Responsive: hide on mobile */
+        @media (max-width: 768px) {
+            .divider-line {
+                display: none;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     # Header row: Title + Product Category on same line
-    header_col1, header_col2, header_col3 = st.columns([3, 1.5, 2.5])
+    header_col1, header_col2 = st.columns([3, 2])
     
     with header_col1:
-        st.markdown("<h1 style='margin-bottom: 0;'>Blastline SKU Configurator</h1>", unsafe_allow_html=True)
-    
-    with header_col2:
-        st.markdown("<p style='margin-top: 18px; margin-bottom: 0; font-weight: 600;'>Product Category</p>", unsafe_allow_html=True)
+        st.markdown("<h1 style='margin-bottom: 0; padding-top: 5px;'>Blastline SKU Configurator</h1>", unsafe_allow_html=True)
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
@@ -390,9 +407,13 @@ def home():
         )
         return
 
-    with header_col3:
-        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-        cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
+    with header_col2:
+        # Product Category label and dropdown in a sub-row
+        pc_label, pc_dropdown = st.columns([1, 2])
+        with pc_label:
+            st.markdown("<p style='padding-top: 12px; font-weight: 600; white-space: nowrap;'>Product Category</p>", unsafe_allow_html=True)
+        with pc_dropdown:
+            cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
     
     cat_data = inv[cat]
     normalize_fields(cat_data)
@@ -404,48 +425,16 @@ def home():
 
     sel = {}
     chosen = []
-
-    # Add responsive CSS for dividers and compact layout
-    st.markdown("""
-        <style>
-        /* Vertical divider for desktop */
-        .vertical-divider {
-            border-left: 2px solid #e0e0e0;
-            height: 100%;
-            min-height: 300px;
-            margin: 0 auto;
-        }
-        
-        /* Hide vertical divider on mobile, show horizontal */
-        @media (max-width: 768px) {
-            .vertical-divider {
-                display: none;
-            }
-            .mobile-divider {
-                display: block !important;
-                border-top: 2px solid #e0e0e0;
-                margin: 20px 0;
-                width: 100%;
-            }
-        }
-        
-        /* Desktop: hide mobile divider */
-        @media (min-width: 769px) {
-            .mobile-divider {
-                display: none;
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
     
-    # Add spacing after header
-    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+    # Spacing after header
+    st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
 
-    # Configuration section with divider - better spacing ratio
-    config_col, spacer1, divider_col, spacer2, extras_col = st.columns([8, 1, 0.2, 1, 8])
+    # Configuration section with visual divider
+    config_col, divider_col, extras_col = st.columns([5, 0.3, 5])
 
     with config_col:
-        st.subheader("Configuration")
+        st.markdown("#### Configuration")
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
             is_text = opts and opts[0].get("type") == "text"
@@ -464,10 +453,11 @@ def home():
                     sel[f] = {"code": o["code"], "name": o["name"]}
     
     with divider_col:
-        st.markdown('<div class="vertical-divider"></div>', unsafe_allow_html=True)
+        st.markdown("<div class='divider-line'></div>", unsafe_allow_html=True)
 
     with extras_col:
-        st.subheader("Extras / Add-ons")
+        st.markdown("#### Extras / Add-ons")
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         
         if extras:
             # Sort extras by order before displaying
@@ -541,15 +531,16 @@ def home():
     # Format: All items separated by dash
     sku_description = " - ".join(all_names) if all_names else ""
 
-    st.markdown("---")
+    # Horizontal divider
+    st.markdown("<hr style='margin: 40px 0; border: none; border-top: 1px solid #e0e0e0;'>", unsafe_allow_html=True)
 
-    # Results Section - Two columns with divider: SKU Display and QR Code
-    sku_col, spacer3, divider_col2, spacer4, qr_col = st.columns([8, 1, 0.2, 1, 8])
+    # Results Section - Two columns with divider
+    sku_col, divider_col2, qr_col = st.columns([5, 0.3, 5])
     
     with sku_col:
         st.markdown("#### Generate SKU")
         if sku:
-            # SKU Display Box - Dark theme with click to copy using components.html
+            # SKU Display Box - Dark theme with click to copy
             sku_html = f"""
             <div id="sku-box" onclick="copySKUText()" style="
                 display: flex;
@@ -564,7 +555,7 @@ def home():
                 transition: all 0.3s ease;
             ">
                 <span id="sku-text" style="
-                    font-size: clamp(18px, 4vw, 32px);
+                    font-size: clamp(18px, 4vw, 28px);
                     font-family: monospace;
                     font-weight: 700;
                     color: #4CAF50;
@@ -574,8 +565,8 @@ def home():
                     background: #2d2d2d;
                     border: none;
                     border-radius: 8px;
-                    padding: 12px 14px;
-                    font-size: 20px;
+                    padding: 10px 12px;
+                    font-size: 18px;
                     transition: all 0.3s ease;
                 ">📋</span>
             </div>
@@ -583,37 +574,29 @@ def home():
                 text-align: center;
                 padding: 8px;
                 color: #888;
-                font-size: 14px;
-                transition: all 0.3s ease;
+                font-size: 13px;
             ">Click to copy SKU</div>
             
             <script>
             function copySKUText() {{
                 navigator.clipboard.writeText("{sku}").then(function() {{
-                    // Update notification
-                    var notification = document.getElementById('copy-notification');
-                    notification.innerText = '✓ Copied to clipboard!';
-                    notification.style.color = '#4CAF50';
-                    
-                    // Update icon background
-                    var icon = document.getElementById('copy-icon');
-                    icon.style.background = '#4CAF50';
-                    icon.innerText = '✓';
-                    
-                    // Reset after 2 seconds
+                    document.getElementById('copy-notification').innerText = '✓ Copied to clipboard!';
+                    document.getElementById('copy-notification').style.color = '#4CAF50';
+                    document.getElementById('copy-icon').style.background = '#4CAF50';
+                    document.getElementById('copy-icon').innerText = '✓';
                     setTimeout(function() {{
-                        notification.innerText = 'Click to copy SKU';
-                        notification.style.color = '#888';
-                        icon.style.background = '#2d2d2d';
-                        icon.innerText = '📋';
+                        document.getElementById('copy-notification').innerText = 'Click to copy SKU';
+                        document.getElementById('copy-notification').style.color = '#888';
+                        document.getElementById('copy-icon').style.background = '#2d2d2d';
+                        document.getElementById('copy-icon').innerText = '📋';
                     }}, 2000);
                 }});
             }}
             </script>
             """
-            st.components.v1.html(sku_html, height=140)
+            st.components.v1.html(sku_html, height=130)
             
-            # SKU Breakdown (expanded by default for easy confirmation)
+            # SKU Breakdown
             with st.expander("SKU Breakdown", expanded=True):
                 if sku_description:
                     st.markdown(f"**{sku_description}**")
@@ -621,17 +604,15 @@ def home():
             st.info("Select options to generate SKU")
     
     with divider_col2:
-        # Vertical divider using responsive CSS class
-        st.markdown('<div class="vertical-divider"></div>', unsafe_allow_html=True)
+        st.markdown("<div class='divider-line'></div>", unsafe_allow_html=True)
     
     with qr_col:
         st.markdown("#### Generate SKU QR Code")
         if sku:
-            # QR Code and download buttons in a clean layout
-            qr_inner_col1, qr_inner_col2 = st.columns([1, 1])
+            # QR Code and download buttons side by side
+            qr_img_col, qr_btn_col = st.columns([1, 1])
             
-            with qr_inner_col1:
-                # QR Code Image with SKU text below
+            with qr_img_col:
                 qr_base64 = get_qr_code_base64(sku)
                 st.markdown(
                     f"""
@@ -641,15 +622,15 @@ def home():
                         border-radius: 12px;
                         border: 1px solid #e0e0e0;
                         text-align: center;
-                        display: inline-block;
+                        width: fit-content;
                     ">
-                        <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="width: 120px; height: 120px;">
+                        <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="width: 130px; height: 130px;">
                         <p style="
                             color: #333;
-                            margin-top: 10px;
+                            margin-top: 8px;
                             margin-bottom: 0;
                             font-family: monospace;
-                            font-size: 12px;
+                            font-size: 11px;
                             font-weight: 600;
                         ">{sku}</p>
                     </div>
@@ -657,43 +638,40 @@ def home():
                     unsafe_allow_html=True
                 )
             
-            with qr_inner_col2:
-                # Download buttons with proper alignment
-                st.markdown("<div style='padding-top: 20px;'></div>", unsafe_allow_html=True)
+            with qr_btn_col:
+                st.markdown("<div style='padding-top: 30px;'></div>", unsafe_allow_html=True)
                 
-                # Download PNG
+                # Download PNG - compact button
                 qr_buffer_png = generate_qr_code(sku, size=300)
                 st.download_button(
                     label="⬇️ Download PNG",
                     data=qr_buffer_png,
                     file_name=f"{sku}_QR.png",
                     mime="image/png",
-                    key="download_png",
-                    use_container_width=True
+                    key="download_png"
                 )
                 
-                st.markdown("<div style='padding-top: 10px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding-top: 8px;'></div>", unsafe_allow_html=True)
                 
-                # Download SVG
+                # Download SVG - compact button
                 svg_content = generate_qr_svg(sku)
                 st.download_button(
                     label="⬇️ Download SVG",
                     data=svg_content,
                     file_name=f"{sku}_QR.svg",
                     mime="image/svg+xml",
-                    key="download_svg",
-                    use_container_width=True
+                    key="download_svg"
                 )
         else:
             st.markdown(
                 """
                 <div style="
-                    background: #f5f5f5;
-                    border: 1px dashed #ccc;
+                    background: #f8f9fa;
+                    border: 2px dashed #dee2e6;
                     border-radius: 12px;
-                    padding: 40px;
+                    padding: 50px 20px;
                     text-align: center;
-                    color: #999;
+                    color: #6c757d;
                 ">
                     QR Code will appear here
                 </div>
@@ -702,9 +680,9 @@ def home():
             )
     
     # Footer
-    st.markdown("---")
+    st.markdown("<hr style='margin: 40px 0 20px 0; border: none; border-top: 1px solid #e0e0e0;'>", unsafe_allow_html=True)
     st.markdown(
-        "<div style='text-align:center;color:#888;padding:20px;font-size:0.9em'>"
+        "<div style='text-align:center;color:#888;padding:10px;font-size:0.85em'>"
         "This application is developed by <strong>Blastline India Pvt Ltd</strong>."
         "</div>",
         unsafe_allow_html=True
