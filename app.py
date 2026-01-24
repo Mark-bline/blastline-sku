@@ -559,8 +559,8 @@ def home():
             """
             st.components.v1.html(sku_html, height=140)
             
-            # SKU Breakdown (collapsible) - Show description
-            with st.expander("SKU Breakdown"):
+            # SKU Breakdown (expanded by default for easy confirmation)
+            with st.expander("SKU Breakdown", expanded=True):
                 if sku_description:
                     st.markdown(f"**{sku_description}**")
         else:
