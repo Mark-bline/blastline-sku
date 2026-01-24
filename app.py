@@ -384,7 +384,12 @@ def home():
         )
         return
 
-    cat = st.selectbox("Product Category", list(inv.keys()))
+    # Product Category with proper heading size and compact dropdown
+    st.subheader("Product Category")
+    cat_col, spacer_col = st.columns([2, 3])
+    with cat_col:
+        cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
+    
     cat_data = inv[cat]
     normalize_fields(cat_data)
 
@@ -396,7 +401,7 @@ def home():
     sel = {}
     chosen = []
 
-    # Add responsive divider CSS
+    # Add responsive CSS for dividers and compact layout
     st.markdown("""
         <style>
         /* Vertical divider for desktop */
@@ -428,9 +433,11 @@ def home():
         }
         </style>
     """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
-    # Configuration section with divider
-    config_col, divider_col, extras_col = st.columns([10, 1, 10])
+    # Configuration section with divider - better spacing ratio
+    config_col, spacer1, divider_col, spacer2, extras_col = st.columns([8, 1, 0.2, 1, 8])
 
     with config_col:
         st.subheader("Configuration")
@@ -526,7 +533,7 @@ def home():
     st.markdown("---")
 
     # Results Section - Two columns with divider: SKU Display and QR Code
-    sku_col, divider_col, qr_col = st.columns([10, 1, 10])
+    sku_col, spacer3, divider_col2, spacer4, qr_col = st.columns([8, 1, 0.2, 1, 8])
     
     with sku_col:
         st.markdown("#### Generate SKU")
@@ -602,7 +609,7 @@ def home():
         else:
             st.info("Select options to generate SKU")
     
-    with divider_col:
+    with divider_col2:
         # Vertical divider using responsive CSS class
         st.markdown('<div class="vertical-divider"></div>', unsafe_allow_html=True)
     
