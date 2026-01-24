@@ -4,6 +4,8 @@ import json
 import itertools
 import requests
 import base64
+import qrcode
+from io import BytesIO
 
 # ==================================================
 # CONSTANTS
@@ -174,20 +176,57 @@ def generate_full_matrix(cat_data):
 def big_copy_box(text):
     """
     Generate HTML for large, clickable SKU display with copy functionality.
+    Features responsive font sizing for mobile devices.
     
     Args:
         text: The SKU text to display and copy
         
     Returns:
-        HTML string with embedded JavaScript
+        HTML string with embedded JavaScript and responsive CSS
     """
     return f"""
-    <div onclick="copySKU()" style="cursor:pointer;background:#111;
-    border:2px solid #4CAF50;border-radius:14px;padding:26px;text-align:center">
-    <div style="font-size:44px;font-family:monospace;color:#4CAF50;font-weight:700">
-    {text}
-    </div>
-    <div id="msg" style="margin-top:8px;color:#aaa">📋 Click to copy</div>
+    <style>
+        .sku-container {{
+            cursor: pointer;
+            background: #111;
+            border: 2px solid #4CAF50;
+            border-radius: 14px;
+            padding: 26px 15px;
+            text-align: center;
+            overflow: hidden;
+        }}
+        .sku-text {{
+            font-family: monospace;
+            color: #4CAF50;
+            font-weight: 700;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            /* Dynamic font sizing based on viewport and text length */
+            font-size: clamp(16px, 5vw, 44px);
+        }}
+        .sku-msg {{
+            margin-top: 8px;
+            color: #aaa;
+            font-size: 14px;
+        }}
+        /* Adjust for very long SKUs */
+        @media (max-width: 768px) {{
+            .sku-container {{
+                padding: 20px 10px;
+            }}
+            .sku-text {{
+                font-size: clamp(14px, 4vw, 28px);
+            }}
+        }}
+        @media (max-width: 480px) {{
+            .sku-text {{
+                font-size: clamp(12px, 3.5vw, 22px);
+            }}
+        }}
+    </style>
+    <div class="sku-container" onclick="copySKU()">
+        <div class="sku-text">{text}</div>
+        <div id="msg" class="sku-msg">📋 Click to copy</div>
     </div>
     <script>
     function copySKU(){{
@@ -199,6 +238,49 @@ def big_copy_box(text):
     }}
     </script>
     """
+
+
+def generate_qr_code(text, size=200):
+    """
+    Generate a QR code image for the given text.
+    
+    Args:
+        text: The text to encode in the QR code
+        size: Size of the QR code image in pixels
+        
+    Returns:
+        BytesIO object containing the PNG image
+    """
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(text)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    return buffer
+
+
+def get_qr_code_base64(text):
+    """
+    Generate a QR code and return as base64 string for HTML embedding.
+    
+    Args:
+        text: The text to encode in the QR code
+        
+    Returns:
+        Base64 encoded string of the QR code PNG
+    """
+    buffer = generate_qr_code(text)
+    return base64.b64encode(buffer.getvalue()).decode()
 
 def show_success(message):
     """Display success message."""
@@ -282,7 +364,7 @@ def home():
     st.markdown("---")
 
     # Configuration section in 2 columns with visual separation
-    c1, separator, c2 = st.columns([5, 0.5, 5])
+    c1, separator_col, c2 = st.columns([5, 0.5, 5])
 
     with c1:
         st.subheader("Configuration")
@@ -296,7 +378,7 @@ def home():
                     o = st.selectbox(f, opts, format_func=get_option_label, help=f"Select {f}")
                     sel[f] = o["code"]
     
-    with separator:
+    with separator_col:
         # Vertical separator line
         st.markdown("""
         <div style="
@@ -391,6 +473,51 @@ def home():
                     for e in extras:
                         if e.get("code") in chosen:
                             st.write(f"- {e['name']}: `{e['code']}`")
+            
+            # QR Code Generator Section
+            with st.expander("📱 QR Code Generator"):
+                qr_col1, qr_col2 = st.columns([1, 1])
+                
+                with qr_col1:
+                    # Generate and display QR code
+                    qr_base64 = get_qr_code_base64(sku)
+                    st.markdown(
+                        f"""
+                        <div style="text-align: center; padding: 20px; background: white; border-radius: 10px;">
+                            <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="max-width: 200px;">
+                            <p style="color: #333; margin-top: 10px; font-family: monospace; font-size: 12px;">{sku}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                
+                with qr_col2:
+                    st.markdown("##### Download Options")
+                    
+                    # Download button
+                    qr_buffer = generate_qr_code(sku, size=300)
+                    st.download_button(
+                        label="📥 Download QR Code",
+                        data=qr_buffer,
+                        file_name=f"SKU_{sku.replace('-', '_')}_QR.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                    
+                    st.markdown("---")
+                    st.markdown("##### Copy QR Code")
+                    st.markdown(
+                        f"""
+                        <p style="font-size: 12px; color: #666;">
+                            Right-click on the QR code image and select "Copy image" to copy to clipboard.
+                        </p>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    st.markdown("---")
+                    st.markdown("##### SKU Text")
+                    st.code(sku, language=None)
     
     # Footer
     st.markdown("---")
