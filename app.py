@@ -13,7 +13,7 @@ from io import BytesIO
 COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Single"
-EXTRAS_PER_PAGE = 8  # Restored to 8 (was changed to 5 previously)
+EXTRAS_PER_PAGE = 8
 
 # ==================================================
 # SETUP
@@ -70,7 +70,13 @@ def get_option_label(o):
     return f"{o['code']} : {o['name']}"
 
 def normalize_fields(cat):
-    """Normalize category fields structure."""
+    """
+    Normalize category fields structure to ensure consistent format.
+    Converts legacy field formats to new structure with 'order' and 'options'.
+    
+    Args:
+        cat: Category dictionary (modified in place)
+    """
     fields = {}
     for i, (k, v) in enumerate(cat.get("fields", {}).items(), start=1):
         if isinstance(v, dict):
@@ -80,11 +86,27 @@ def normalize_fields(cat):
     cat["fields"] = fields
 
 def ordered_fields(fields):
-    """Return field names sorted by order."""
+    """
+    Return field names sorted by their order value.
+    
+    Args:
+        fields: Dictionary of field configurations
+        
+    Returns:
+        List of field names in order
+    """
     return sorted(fields.keys(), key=lambda k: fields[k].get("order", 999))
 
 def normalize_option_df(data):
-    """Convert options list to normalized DataFrame."""
+    """
+    Convert options list to normalized DataFrame for editing.
+    
+    Args:
+        data: List of option dictionaries
+        
+    Returns:
+        DataFrame with code, name, order columns
+    """
     df = pd.DataFrame(data or [], columns=["code", "name", "order"])
     if df.empty:
         df = pd.DataFrame(columns=["code", "name", "order"])
@@ -93,7 +115,15 @@ def normalize_option_df(data):
     return df[["code", "name", "order"]]
 
 def normalize_extras_df(data):
-    """Convert extras list to normalized DataFrame."""
+    """
+    Convert extras list to normalized DataFrame for editing.
+    
+    Args:
+        data: List of extra dictionaries
+        
+    Returns:
+        DataFrame with code, name, and order columns
+    """
     df = pd.DataFrame(data or [], columns=["code", "name", "order"])
     if df.empty:
         df = pd.DataFrame(columns=["code", "name", "order"])
@@ -102,11 +132,20 @@ def normalize_extras_df(data):
     return df[["code", "name", "order"]]
 
 def generate_full_matrix(cat_data):
-    """Generate all possible SKU combinations."""
+    """
+    Generate all possible SKU combinations for a category.
+    
+    Args:
+        cat_data: Category configuration dictionary
+        
+    Returns:
+        pandas DataFrame with all SKU combinations
+    """
     normalize_fields(cat_data)
     fields = cat_data["fields"]
     sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
     
+    # Get all field combinations (excluding text input fields)
     field_combos = []
     field_names = []
     
@@ -117,11 +156,13 @@ def generate_full_matrix(cat_data):
             field_names.append(f)
             field_combos.append([o["code"] for o in opts])
     
+    # Generate all combinations
     if not field_combos:
         return pd.DataFrame(columns=["SKU"] + field_names)
     
     combinations = list(itertools.product(*field_combos))
     
+    # Create DataFrame
     rows = []
     for combo in combinations:
         sku = sep.join(combo)
@@ -132,8 +173,84 @@ def generate_full_matrix(cat_data):
     
     return pd.DataFrame(rows)
 
+def big_copy_box(text):
+    """
+    Generate HTML for large, clickable SKU display with copy functionality.
+    Features responsive font sizing for mobile devices.
+    
+    Args:
+        text: The SKU text to display and copy
+        
+    Returns:
+        HTML string with embedded JavaScript and responsive CSS
+    """
+    return f"""
+    <style>
+        .sku-container {{
+            cursor: pointer;
+            background: #111;
+            border: 2px solid #4CAF50;
+            border-radius: 14px;
+            padding: 26px 15px;
+            text-align: center;
+            overflow: hidden;
+        }}
+        .sku-text {{
+            font-family: monospace;
+            color: #4CAF50;
+            font-weight: 700;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            /* Dynamic font sizing based on viewport and text length */
+            font-size: clamp(16px, 5vw, 44px);
+        }}
+        .sku-msg {{
+            margin-top: 8px;
+            color: #aaa;
+            font-size: 14px;
+        }}
+        /* Adjust for very long SKUs */
+        @media (max-width: 768px) {{
+            .sku-container {{
+                padding: 20px 10px;
+            }}
+            .sku-text {{
+                font-size: clamp(14px, 4vw, 28px);
+            }}
+        }}
+        @media (max-width: 480px) {{
+            .sku-text {{
+                font-size: clamp(12px, 3.5vw, 22px);
+            }}
+        }}
+    </style>
+    <div class="sku-container" onclick="copySKU()">
+        <div class="sku-text">{text}</div>
+        <div id="msg" class="sku-msg">📋 Click to copy</div>
+    </div>
+    <script>
+    function copySKU(){{
+        navigator.clipboard.writeText("{text}");
+        let m=document.getElementById("msg");
+        m.innerText="✅ Copied to clipboard";
+        m.style.color="#4CAF50";
+        setTimeout(()=>{{m.innerText="📋 Click to copy";m.style.color="#aaa";}},2000);
+    }}
+    </script>
+    """
+
+
 def generate_qr_code(text, size=200):
-    """Generate QR code image."""
+    """
+    Generate a QR code image for the given text.
+    
+    Args:
+        text: The text to encode in the QR code
+        size: Size of the QR code image in pixels
+        
+    Returns:
+        BytesIO object containing the PNG image
+    """
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -142,19 +259,40 @@ def generate_qr_code(text, size=200):
     )
     qr.add_data(text)
     qr.make(fit=True)
+    
     img = qr.make_image(fill_color="black", back_color="white")
+    
     buffer = BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
+    
     return buffer
 
+
 def get_qr_code_base64(text):
-    """Generate QR code base64 string."""
+    """
+    Generate a QR code and return as base64 string for HTML embedding.
+    
+    Args:
+        text: The text to encode in the QR code
+        
+    Returns:
+        Base64 encoded string of the QR code PNG
+    """
     buffer = generate_qr_code(text)
     return base64.b64encode(buffer.getvalue()).decode()
 
+
 def generate_qr_svg(text):
-    """Generate QR code SVG."""
+    """
+    Generate a QR code as SVG string.
+    
+    Args:
+        text: The text to encode in the QR code
+        
+    Returns:
+        SVG string of the QR code
+    """
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -163,30 +301,39 @@ def generate_qr_svg(text):
     )
     qr.add_data(text)
     qr.make(fit=True)
+    
+    # Get the QR code matrix
     matrix = qr.get_matrix()
     size = len(matrix)
     scale = 10
+    
+    # Build SVG
     svg_size = size * scale
     svg_parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_size}" height="{svg_size}" viewBox="0 0 {svg_size} {svg_size}">',
         f'<rect width="100%" height="100%" fill="white"/>',
     ]
+    
     for y, row in enumerate(matrix):
         for x, cell in enumerate(row):
             if cell:
                 svg_parts.append(
                     f'<rect x="{x * scale}" y="{y * scale}" width="{scale}" height="{scale}" fill="black"/>'
                 )
+    
     svg_parts.append('</svg>')
     return '\n'.join(svg_parts)
 
 def show_success(message):
+    """Display success message."""
     st.success(message)
 
 def show_error(message):
+    """Display error message."""
     st.error(message)
 
 def show_info(message):
+    """Display info message."""
     st.info(message)
 
 # ==================================================
@@ -209,91 +356,123 @@ if "confirm_delete_field" not in st.session_state:
     st.session_state["confirm_delete_field"] = None
 
 def go(p):
+    """Navigate to a different page."""
     st.session_state["page"] = p
     st.rerun()
 
 # ==================================================
-# HOME (UPDATED UI)
+# HOME
 # ==================================================
 def home():
-    """Main SKU configuration page with Card UI."""
-    
-    # 1. CSS Styling for the "Card" Layout
-    st.markdown("""
-        <style>
-        /* Main background */
-        .stApp {
-            background-color: #f8f9fa;
-        }
-        
-        /* Card Container Styling */
-        div[data-testid="stVerticalBlock"] > div.element-container {
-            width: 100%;
-        }
-        
-        /* Create the "Card" look for the columns */
-        div[data-testid="column"] {
-            background-color: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            border: 1px solid #e9ecef;
-        }
-
-        /* Headers inside cards */
-        h4 {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 20px;
-        }
-
-        /* Form elements styling */
-        .stSelectbox label, .stTextInput label, .stRadio label {
-            font-weight: 500;
-            color: #4a4a4a;
-        }
-        
-        /* Divider */
-        hr {
-            margin: 25px 0;
-            border-color: #eee;
-        }
-        
-        /* Center the top header */
-        .main-header {
-            text-align: center; 
-            margin-bottom: 20px;
-        }
-        .main-header h1 {
-            font-weight: 800;
-            font-size: 2.2rem;
-            color: #000;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # 2. Top Header & Settings Access
+    """Main SKU configuration page."""
     with st.sidebar:
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    st.markdown("<div class='main-header'><h1>Blastline SKU Configurator</h1></div>", unsafe_allow_html=True)
+    # Custom CSS for the new layout
+    st.markdown("""
+        <style>
+        /* Center header */
+        .center-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        /* Card style for right panel */
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        
+        /* SKU display box */
+        .sku-box {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        
+        .sku-text {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a73e8;
+        }
+        
+        .copy-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* QR code box */
+        .qr-box {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        
+        /* Section headers */
+        .section-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        /* Pagination arrows */
+        .pagination-arrows {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        /* Responsive divider */
+        .vertical-divider {
+            width: 1px;
+            background: #e0e0e0;
+            min-height: 500px;
+            margin: 0 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .vertical-divider {
+                display: none;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # 3. Category Selection (Centered)
+    # Centered Header
+    st.markdown("<h2 class='center-header'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
+
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
         st.warning("No categories available. Please contact admin to set up product categories.")
         return
 
-    # Center the category dropdown
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
+    # Centered Product Category dropdown
+    cat_spacer1, cat_col, cat_spacer2 = st.columns([1, 2, 1])
+    with cat_col:
         cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
     
-    # Data Setup
     cat_data = inv[cat]
     normalize_fields(cat_data)
+
     fields = cat_data["fields"]
     extras = cat_data.get("extras", [])
     sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
@@ -301,42 +480,41 @@ def home():
 
     sel = {}
     chosen = []
+    
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height: 20px'></div>", unsafe_allow_html=True)
+    # Main two-column layout
+    left_col, right_col = st.columns([1, 1], gap="large")
 
-    # 4. Main Two-Column Layout
-    col_config, col_results = st.columns([1, 1], gap="large")
-
-    # --- LEFT COLUMN: CONFIGURATION ---
-    with col_config:
-        st.markdown("#### Configuration")
+    with left_col:
+        # Configuration Section
+        st.markdown("<p class='section-header'>Configuration</p>", unsafe_allow_html=True)
         
-        # Dynamic Fields
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
             is_text = opts and opts[0].get("type") == "text"
-            
             if is_text:
-                text_val = st.text_input(f, help=f"Enter {f}", placeholder=f"Enter {f}")
+                text_val = st.text_input(f, help=f"Enter {f}", placeholder=f"Enter {f}", label_visibility="collapsed")
                 sel[f] = {"code": text_val, "name": text_val}
             else:
                 if opts:
-                    # Format: "Machine: BL - Blast Machine" style in dropdown
                     o = st.selectbox(
                         f, 
                         opts, 
-                        format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}",
+                        format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}", 
+                        help=f"Select {f}",
+                        label_visibility="collapsed"
                     )
                     sel[f] = {"code": o["code"], "name": o["name"]}
         
-        st.markdown("---")
+        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         
         # Extras Section
-        st.markdown("#### Extras")
+        st.markdown("<p class='section-header'>Extras</p>", unsafe_allow_html=True)
+        
         if extras:
             sorted_extras = sorted(extras, key=lambda x: x.get("order", 999))
             
-            # Pagination
             total_extras = len(sorted_extras)
             total_pages = (total_extras - 1) // EXTRAS_PER_PAGE + 1 if total_extras > 0 else 1
             current_page = st.session_state.get("extras_page", 0)
@@ -348,18 +526,19 @@ def home():
             start_idx = current_page * EXTRAS_PER_PAGE
             end_idx = min(start_idx + EXTRAS_PER_PAGE, total_extras)
             page_extras = sorted_extras[start_idx:end_idx]
-
-            # Render Extras
+            
             if extras_mode == "Single":
                 extra_options = [{"name": "None", "code": ""}] + page_extras
                 extra_labels = [e["name"] for e in extra_options]
+                
                 selected = st.radio(
-                    "Select Extra:",
+                    "Select one extra:",
                     options=range(len(extra_options)),
                     format_func=lambda i: extra_labels[i],
                     key="single_extra_selector",
                     label_visibility="collapsed"
                 )
+                
                 if selected > 0 and extra_options[selected].get("code"):
                     chosen.append({"code": extra_options[selected]["code"], "name": extra_options[selected]["name"]})
             else:
@@ -369,23 +548,23 @@ def home():
                     if st.checkbox(e["name"], key=f"extra_{actual_idx}"):
                         if e.get("code"):
                             chosen.append({"code": e["code"], "name": e["name"]})
-
-            # Pagination Controls
+            
+            # Pagination arrows at bottom
             if total_pages > 1:
-                st.markdown("<br>", unsafe_allow_html=True)
-                c_prev, c_info, c_next = st.columns([1, 2, 1])
-                with c_prev:
-                    if st.button("❮", disabled=(current_page == 0)):
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                prev_col, next_col, spacer = st.columns([1, 1, 3])
+                with prev_col:
+                    if st.button("‹", disabled=(current_page == 0), key="prev_page"):
                         st.session_state["extras_page"] = current_page - 1
                         st.rerun()
-                with c_next:
-                    if st.button("❯", disabled=(current_page == total_pages - 1)):
+                with next_col:
+                    if st.button("›", disabled=(current_page == total_pages - 1), key="next_page"):
                         st.session_state["extras_page"] = current_page + 1
                         st.rerun()
         else:
-            st.caption("No extras available.")
+            st.info("No extras configured")
 
-    # Calculate SKU Logic
+    # Calculate SKU
     base = sep.join([sel[k]["code"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["code"]])
     extras_codes = "".join([c["code"] for c in chosen])
     sku = base + (sep if base and extras_codes else "") + extras_codes
@@ -393,101 +572,120 @@ def home():
     config_names = [sel[k]["name"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["name"]]
     extras_names = [c["name"] for c in chosen]
     all_names = config_names + extras_names
-    sku_description = " - ".join(all_names) if all_names else "Select options to view breakdown"
+    sku_description = " - ".join(all_names) if all_names else ""
 
-    # --- RIGHT COLUMN: RESULTS ---
-    with col_results:
-        st.markdown("#### Generated SKU")
-        
-        # Light Theme SKU Box
-        if sku:
-            sku_html = f"""
-            <div onclick="copySKUText()" style="
-                background: #F0F7FF;
-                border: 1px solid #CCE4FF;
-                border-radius: 8px;
-                padding: 20px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-                margin-bottom: 15px;
+    with right_col:
+        # Results in a card-style container
+        st.markdown("""
+            <div style="
+                background: #f8f9fa;
+                border-radius: 16px;
+                padding: 25px;
+                min-height: 450px;
             ">
-                <span style="color: #0066CC; font-weight: 700; font-family: monospace; font-size: 24px;">{sku}</span>
+        """, unsafe_allow_html=True)
+        
+        # Generated SKU Section
+        st.markdown("<p class='section-header'>Generated SKU</p>", unsafe_allow_html=True)
+        
+        if sku:
+            # SKU box with copy functionality
+            sku_html = f"""
+            <div onclick="copyText('{sku}')" style="
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 15px 20px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+                transition: all 0.2s;
+            ">
+                <span style="
+                    font-family: monospace;
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1a73e8;
+                ">{sku}</span>
                 <div style="text-align: center;">
-                    <span id="copy-icon" style="font-size: 20px;">📋</span>
-                    <div style="font-size: 10px; color: #666;">Click to Copy</div>
+                    <span style="font-size: 18px;">📋</span>
+                    <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
                 </div>
             </div>
-            <div id="copy-msg" style="height: 20px; text-align: right; font-size: 12px; color: #28a745;"></div>
-            
             <script>
-            function copySKUText() {{
-                navigator.clipboard.writeText("{sku}");
-                document.getElementById('copy-msg').innerText = "Copied!";
-                setTimeout(() => {{ document.getElementById('copy-msg').innerText = ""; }}, 2000);
+            function copyText(text) {{
+                navigator.clipboard.writeText(text);
             }}
             </script>
             """
-            st.components.v1.html(sku_html, height=120)
-        else:
-            st.info("Pending selection...")
-
-        # Breakdown
-        st.markdown("**SKU Breakdown**")
-        st.caption(sku_description)
-
-        st.markdown("---")
-        
-        st.markdown("#### Generated QR Code")
-        if sku:
+            st.components.v1.html(sku_html, height=80)
+            
+            # SKU Breakdown (plain text, not expander)
+            st.markdown("<p style='font-weight: 600; font-size: 14px; margin-top: 15px;'>SKU Breakdown</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size: 13px; color: #555; line-height: 1.5;'>{sku_description}</p>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+            
+            # Generated QR Code Section
+            st.markdown("<p class='section-header'>Generated QR Code</p>", unsafe_allow_html=True)
+            
             qr_base64 = get_qr_code_base64(sku)
-            
-            # QR Code Display
-            st.markdown(
-                f"""
-                <div style="
-                    background: #F8F9FA;
-                    border: 1px dashed #DEE2E6;
-                    border-radius: 8px;
-                    padding: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                ">
-                    <img src="data:image/png;base64,{qr_base64}" width="100">
-                    <div style="text-align: right;">
-                        <span style="font-size: 24px;">📱</span>
-                        <div style="font-size: 10px; color: #666;">Scan or DL</div>
-                    </div>
+            qr_html = f"""
+            <div onclick="copyText('{sku}')" style="
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 15px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                cursor: pointer;
+            ">
+                <img src="data:image/png;base64,{qr_base64}" style="width: 80px; height: 80px;">
+                <div style="text-align: center;">
+                    <span style="font-size: 20px;">📋</span>
+                    <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
                 </div>
-                """, 
-                unsafe_allow_html=True
+            </div>
+            """
+            st.components.v1.html(qr_html, height=120)
+            
+            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            
+            # Download PNG button
+            qr_buffer_png = generate_qr_code(sku, size=300)
+            st.download_button(
+                label="Download PNG ⬇️",
+                data=qr_buffer_png,
+                file_name=f"{sku}_QR.png",
+                mime="image/png",
+                key="download_png"
             )
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Download Button
-            col_dl, _ = st.columns([1, 1])
-            with col_dl:
-                qr_buffer_png = generate_qr_code(sku, size=300)
-                st.download_button(
-                    label="⬇️ Download PNG",
-                    data=qr_buffer_png,
-                    file_name=f"{sku}_QR.png",
-                    mime="image/png",
-                )
-                
-                # SVG Download
-                svg_content = generate_qr_svg(sku)
-                st.download_button(
-                    label="⬇️ Download SVG",
-                    data=svg_content,
-                    file_name=f"{sku}_QR.svg",
-                    mime="image/svg+xml",
-                )
         else:
-            st.caption("QR Code will appear here")
+            st.markdown("""
+                <div style="
+                    background: white;
+                    border: 1px dashed #ccc;
+                    border-radius: 10px;
+                    padding: 30px;
+                    text-align: center;
+                    color: #999;
+                ">
+                    Select configuration to generate SKU
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center;color:#aaa;font-size:0.8em;'>"
+        "Developed by <strong>Blastline India Pvt Ltd</strong>"
+        "</div>",
+        unsafe_allow_html=True
+    )
 
 # ==================================================
 # LOGIN
@@ -515,7 +713,7 @@ def login():
                 go("home")
 
 # ==================================================
-# ADMIN (RESTORED STABLE VERSION)
+# ADMIN
 # ==================================================
 def admin():
     """Admin configuration page."""
