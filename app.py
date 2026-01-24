@@ -369,96 +369,8 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    # Custom CSS for the new layout
-    st.markdown("""
-        <style>
-        /* Center header */
-        .center-header {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        
-        /* Card style for right panel */
-        .result-card {
-            background: #f8f9fa;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-        
-        /* SKU display box */
-        .sku-box {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 10px 0;
-        }
-        
-        .sku-text {
-            font-family: monospace;
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a73e8;
-        }
-        
-        .copy-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        /* QR code box */
-        .qr-box {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin: 10px 0;
-        }
-        
-        /* Section headers */
-        .section-header {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 15px;
-        }
-        
-        /* Pagination arrows */
-        .pagination-arrows {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        /* Responsive divider */
-        .vertical-divider {
-            width: 1px;
-            background: #e0e0e0;
-            min-height: 500px;
-            margin: 0 15px;
-        }
-        
-        @media (max-width: 768px) {
-            .vertical-divider {
-                display: none;
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     # Centered Header
-    st.markdown("<h2 class='center-header'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-bottom: 5px;'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
@@ -488,7 +400,7 @@ def home():
 
     with left_col:
         # Configuration Section
-        st.markdown("<p class='section-header'>Configuration</p>", unsafe_allow_html=True)
+        st.markdown("**Configuration**")
         
         for f in ordered_fields(fields):
             opts = fields[f]["options"]
@@ -507,10 +419,10 @@ def home():
                     )
                     sel[f] = {"code": o["code"], "name": o["name"]}
         
-        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
         
         # Extras Section
-        st.markdown("<p class='section-header'>Extras</p>", unsafe_allow_html=True)
+        st.markdown("**Extras**")
         
         if extras:
             sorted_extras = sorted(extras, key=lambda x: x.get("order", 999))
@@ -532,7 +444,7 @@ def home():
                 extra_labels = [e["name"] for e in extra_options]
                 
                 selected = st.radio(
-                    "Select one extra:",
+                    "Select extra:",
                     options=range(len(extra_options)),
                     format_func=lambda i: extra_labels[i],
                     key="single_extra_selector",
@@ -551,8 +463,7 @@ def home():
             
             # Pagination arrows at bottom
             if total_pages > 1:
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                prev_col, next_col, spacer = st.columns([1, 1, 3])
+                prev_col, next_col, spacer = st.columns([1, 1, 4])
                 with prev_col:
                     if st.button("‹", disabled=(current_page == 0), key="prev_page"):
                         st.session_state["extras_page"] = current_page - 1
@@ -575,111 +486,98 @@ def home():
     sku_description = " - ".join(all_names) if all_names else ""
 
     with right_col:
-        # Results in a card-style container
-        st.markdown("""
-            <div style="
-                background: #f8f9fa;
-                border-radius: 16px;
-                padding: 25px;
-                min-height: 450px;
-            ">
-        """, unsafe_allow_html=True)
-        
-        # Generated SKU Section
-        st.markdown("<p class='section-header'>Generated SKU</p>", unsafe_allow_html=True)
-        
-        if sku:
-            # SKU box with copy functionality
-            sku_html = f"""
-            <div onclick="copyText('{sku}')" style="
-                background: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 10px;
-                padding: 15px 20px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                cursor: pointer;
-                transition: all 0.2s;
-            ">
-                <span style="
-                    font-family: monospace;
-                    font-size: 18px;
-                    font-weight: 600;
-                    color: #1a73e8;
-                ">{sku}</span>
-                <div style="text-align: center;">
-                    <span style="font-size: 18px;">📋</span>
-                    <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
-                </div>
-            </div>
-            <script>
-            function copyText(text) {{
-                navigator.clipboard.writeText(text);
-            }}
-            </script>
-            """
-            st.components.v1.html(sku_html, height=80)
+        # Right panel with card-style background using container
+        with st.container():
+            # Generated SKU Section
+            st.markdown("**Generated SKU**")
             
-            # SKU Breakdown (plain text, not expander)
-            st.markdown("<p style='font-weight: 600; font-size: 14px; margin-top: 15px;'>SKU Breakdown</p>", unsafe_allow_html=True)
-            st.markdown(f"<p style='font-size: 13px; color: #555; line-height: 1.5;'>{sku_description}</p>", unsafe_allow_html=True)
-            
-            st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-            
-            # Generated QR Code Section
-            st.markdown("<p class='section-header'>Generated QR Code</p>", unsafe_allow_html=True)
-            
-            qr_base64 = get_qr_code_base64(sku)
-            qr_html = f"""
-            <div onclick="copyText('{sku}')" style="
-                background: white;
-                border: 1px solid #e0e0e0;
-                border-radius: 10px;
-                padding: 15px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                cursor: pointer;
-            ">
-                <img src="data:image/png;base64,{qr_base64}" style="width: 80px; height: 80px;">
-                <div style="text-align: center;">
-                    <span style="font-size: 20px;">📋</span>
-                    <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
-                </div>
-            </div>
-            """
-            st.components.v1.html(qr_html, height=120)
-            
-            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-            
-            # Download PNG button
-            qr_buffer_png = generate_qr_code(sku, size=300)
-            st.download_button(
-                label="Download PNG ⬇️",
-                data=qr_buffer_png,
-                file_name=f"{sku}_QR.png",
-                mime="image/png",
-                key="download_png"
-            )
-        else:
-            st.markdown("""
-                <div style="
+            if sku:
+                # SKU box with copy functionality
+                sku_html = f"""
+                <div id="sku-container" onclick="copySKU()" style="
                     background: white;
-                    border: 1px dashed #ccc;
+                    border: 1px solid #e0e0e0;
                     border-radius: 10px;
-                    padding: 30px;
-                    text-align: center;
-                    color: #999;
+                    padding: 15px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    cursor: pointer;
+                    margin: 10px 0;
                 ">
-                    Select configuration to generate SKU
+                    <span style="
+                        font-family: monospace;
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: #1a73e8;
+                    ">{sku}</span>
+                    <div id="copy-area" style="text-align: center;">
+                        <span id="copy-icon" style="font-size: 18px;">📋</span>
+                        <p id="copy-text" style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
+                    </div>
                 </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+                <script>
+                function copySKU() {{
+                    navigator.clipboard.writeText("{sku}").then(function() {{
+                        document.getElementById('copy-icon').innerText = '✓';
+                        document.getElementById('copy-text').innerText = 'Copied!';
+                        document.getElementById('copy-text').style.color = '#4CAF50';
+                        setTimeout(function() {{
+                            document.getElementById('copy-icon').innerText = '📋';
+                            document.getElementById('copy-text').innerText = 'Click to Copy';
+                            document.getElementById('copy-text').style.color = '#888';
+                        }}, 2000);
+                    }});
+                }}
+                </script>
+                """
+                st.components.v1.html(sku_html, height=75)
+                
+                # SKU Breakdown
+                st.markdown("**SKU Breakdown**")
+                st.markdown(f"<p style='font-size: 14px; color: #555;'>{sku_description}</p>", unsafe_allow_html=True)
+                
+                st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+                
+                # Generated QR Code Section
+                st.markdown("**Generated QR Code**")
+                
+                qr_base64 = get_qr_code_base64(sku)
+                qr_html = f"""
+                <div onclick="copySKU()" style="
+                    background: white;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 10px;
+                    padding: 15px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 20px;
+                    cursor: pointer;
+                    margin: 10px 0;
+                ">
+                    <img src="data:image/png;base64,{qr_base64}" style="width: 90px; height: 90px;">
+                    <div style="text-align: center;">
+                        <span style="font-size: 20px;">📋</span>
+                        <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
+                    </div>
+                </div>
+                """
+                st.components.v1.html(qr_html, height=130)
+                
+                # Download PNG button
+                qr_buffer_png = generate_qr_code(sku, size=300)
+                st.download_button(
+                    label="Download PNG  ⬇️",
+                    data=qr_buffer_png,
+                    file_name=f"{sku}_QR.png",
+                    mime="image/png",
+                    key="download_png"
+                )
+            else:
+                st.info("Select configuration to generate SKU")
     
     # Footer
-    st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 50px;'></div>", unsafe_allow_html=True)
     st.markdown(
         "<div style='text-align:center;color:#aaa;font-size:0.8em;'>"
         "Developed by <strong>Blastline India Pvt Ltd</strong>"
