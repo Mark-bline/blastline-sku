@@ -495,7 +495,7 @@ def home():
             st.markdown("**Generated SKU**")
             
             if sku:
-                # SKU box with light blue background - all sans-serif fonts
+                # SKU box with light blue background - compact width
                 sku_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <style>
@@ -504,23 +504,23 @@ def home():
                 <div id="sku-container" onclick="copySKU()" style="
                     background: #e8f4fd;
                     border: 1px solid #c5dff0;
-                    border-radius: 10px;
-                    padding: 16px 20px;
-                    display: flex;
+                    border-radius: 12px;
+                    padding: 16px 24px;
+                    display: inline-flex;
                     align-items: center;
-                    justify-content: space-between;
+                    gap: 30px;
                     cursor: pointer;
                     margin: 10px 0;
                 ">
                     <span style="
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        font-size: 20px;
+                        font-size: 18px;
                         font-weight: 600;
                         color: #1a73e8;
                     ">{sku}</span>
                     <div id="copy-area" style="text-align: center; color: #1a73e8;">
-                        <span id="copy-icon" class="material-symbols-outlined" style="font-size: 22px;">content_copy</span>
-                        <p id="copy-text" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #5a9bd5; margin: 4px 0 0 0;">Click to Copy</p>
+                        <span id="copy-icon" class="material-symbols-outlined" style="font-size: 20px;">content_copy</span>
+                        <p id="copy-text" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 9px; color: #5a9bd5; margin: 2px 0 0 0;">Click to Copy</p>
                     </div>
                 </div>
                 <script>
@@ -540,7 +540,7 @@ def home():
                 }}
                 </script>
                 """
-                st.components.v1.html(sku_html, height=80)
+                st.components.v1.html(sku_html, height=75)
                 
                 # SKU Breakdown
                 st.markdown("**SKU Breakdown**")
@@ -548,7 +548,7 @@ def home():
                 
                 st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
                 
-                # Generated QR Code Section - QR and Download in single box
+                # Generated QR Code Section - QR and Download in single compact box
                 st.markdown("**Generated QR Code**")
                 
                 qr_base64 = get_qr_code_base64(sku)
@@ -565,37 +565,37 @@ def home():
                 <div style="
                     background: white;
                     border: 1px solid #e0e0e0;
-                    border-radius: 10px;
-                    padding: 20px;
-                    display: flex;
+                    border-radius: 12px;
+                    padding: 16px 20px;
+                    display: inline-flex;
                     align-items: center;
-                    gap: 25px;
+                    gap: 20px;
                     margin: 10px 0;
                 ">
-                    <img src="data:image/png;base64,{qr_base64}" style="width: 90px; height: 90px;">
+                    <img src="data:image/png;base64,{qr_base64}" style="width: 80px; height: 80px;">
                     <a href="data:image/png;base64,{qr_download_base64}" 
                        download="{sku}_QR.png" 
                        style="
-                           display: flex;
+                           display: inline-flex;
                            align-items: center;
-                           gap: 8px;
+                           gap: 6px;
                            background: #f8f9fa;
                            border: 1px solid #e0e0e0;
                            border-radius: 8px;
-                           padding: 10px 16px;
+                           padding: 10px 14px;
                            text-decoration: none;
                            color: #333;
                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                           font-size: 14px;
+                           font-size: 13px;
                            font-weight: 500;
                            cursor: pointer;
                        ">
-                        <span class="material-symbols-outlined" style="font-size: 20px; color: #1a73e8;">download</span>
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: #1a73e8;">download</span>
                         Download PNG
                     </a>
                 </div>
                 """
-                st.components.v1.html(qr_html, height=150)
+                st.components.v1.html(qr_html, height=130)
                 
             else:
                 st.info("Select configuration to generate SKU")
