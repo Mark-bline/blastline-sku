@@ -28,12 +28,6 @@ class GithubStorage:
     
     def __init__(self):
         if "github" in st.secrets:
-            g = st.secrets["github"]
-            self.api_url = f"https://api.github.com/repos/{g['owner']}/{g['repo']}/contents/{g['filepath']}"
-            self.headers = {"Authorization": f"token {g['token']}"}
-            self.branch = g["branch"]
-            self.can_connect = True
-        else:
             self.can_connect = False
 
     def load(self):
@@ -969,3 +963,4 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+
