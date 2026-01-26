@@ -370,15 +370,15 @@ def home():
             go("login")
 
     # Centered Header
-    st.markdown("<h2 style='text-align: center; margin-bottom: 5px;'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-bottom: 5px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
         st.warning("No categories available. Please contact admin to set up product categories.")
         return
 
-    # Centered Product Category dropdown
-    cat_spacer1, cat_col, cat_spacer2 = st.columns([1, 2, 1])
+    # Centered Product Category dropdown - compact width
+    cat_spacer1, cat_col, cat_spacer2 = st.columns([2, 1.5, 2])
     with cat_col:
         cat = st.selectbox("Product Category", list(inv.keys()), label_visibility="collapsed")
     
@@ -402,22 +402,25 @@ def home():
         # Configuration Section
         st.markdown("**Configuration**")
         
-        for f in ordered_fields(fields):
-            opts = fields[f]["options"]
-            is_text = opts and opts[0].get("type") == "text"
-            if is_text:
-                text_val = st.text_input(f, help=f"Enter {f}", placeholder=f"Enter {f}", label_visibility="collapsed")
-                sel[f] = {"code": text_val, "name": text_val}
-            else:
-                if opts:
-                    o = st.selectbox(
-                        f, 
-                        opts, 
-                        format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}", 
-                        help=f"Select {f}",
-                        label_visibility="collapsed"
-                    )
-                    sel[f] = {"code": o["code"], "name": o["name"]}
+        # Create a narrower container for dropdowns
+        config_inner, config_spacer = st.columns([3, 1])
+        with config_inner:
+            for f in ordered_fields(fields):
+                opts = fields[f]["options"]
+                is_text = opts and opts[0].get("type") == "text"
+                if is_text:
+                    text_val = st.text_input(f, help=f"Enter {f}", placeholder=f"Enter {f}", label_visibility="collapsed")
+                    sel[f] = {"code": text_val, "name": text_val}
+                else:
+                    if opts:
+                        o = st.selectbox(
+                            f, 
+                            opts, 
+                            format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}", 
+                            help=f"Select {f}",
+                            label_visibility="collapsed"
+                        )
+                        sel[f] = {"code": o["code"], "name": o["name"]}
         
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
         
@@ -492,32 +495,32 @@ def home():
             st.markdown("**Generated SKU**")
             
             if sku:
-                # SKU box with light blue background and Material icon
+                # SKU box with light blue background - all sans-serif fonts
                 sku_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+                <style>
+                    * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+                </style>
                 <div id="sku-container" onclick="copySKU()" style="
-                    background: linear-gradient(135deg, #e8f4fd 0%, #d6ebfa 100%);
-                    border: 1px solid #b8d4ed;
-                    border-radius: 12px;
-                    padding: 18px 24px;
+                    background: #e8f4fd;
+                    border: 1px solid #c5dff0;
+                    border-radius: 10px;
+                    padding: 16px 20px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     cursor: pointer;
                     margin: 10px 0;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.1);
                 ">
                     <span style="
-                        font-family: 'Courier New', monospace;
-                        font-size: 22px;
-                        font-weight: 700;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        font-size: 20px;
+                        font-weight: 600;
                         color: #1a73e8;
-                        letter-spacing: 1px;
                     ">{sku}</span>
                     <div id="copy-area" style="text-align: center; color: #1a73e8;">
-                        <span id="copy-icon" class="material-symbols-outlined" style="font-size: 24px;">content_copy</span>
-                        <p id="copy-text" style="font-size: 10px; color: #5a9bd5; margin: 4px 0 0 0;">Click to Copy</p>
+                        <span id="copy-icon" class="material-symbols-outlined" style="font-size: 22px;">content_copy</span>
+                        <p id="copy-text" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #5a9bd5; margin: 4px 0 0 0;">Click to Copy</p>
                     </div>
                 </div>
                 <script>
@@ -537,11 +540,11 @@ def home():
                 }}
                 </script>
                 """
-                st.components.v1.html(sku_html, height=85)
+                st.components.v1.html(sku_html, height=80)
                 
                 # SKU Breakdown
                 st.markdown("**SKU Breakdown**")
-                st.markdown(f"<p style='font-size: 14px; color: #555;'>{sku_description}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; color: #555;'>{sku_description}</p>", unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
                 
@@ -556,18 +559,20 @@ def home():
                 
                 qr_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+                <style>
+                    * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+                </style>
                 <div style="
                     background: white;
                     border: 1px solid #e0e0e0;
-                    border-radius: 12px;
+                    border-radius: 10px;
                     padding: 20px;
                     display: flex;
                     align-items: center;
                     gap: 25px;
                     margin: 10px 0;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
                 ">
-                    <img src="data:image/png;base64,{qr_base64}" style="width: 100px; height: 100px;">
+                    <img src="data:image/png;base64,{qr_base64}" style="width: 90px; height: 90px;">
                     <a href="data:image/png;base64,{qr_download_base64}" 
                        download="{sku}_QR.png" 
                        style="
@@ -577,22 +582,20 @@ def home():
                            background: #f8f9fa;
                            border: 1px solid #e0e0e0;
                            border-radius: 8px;
-                           padding: 12px 18px;
+                           padding: 10px 16px;
                            text-decoration: none;
                            color: #333;
+                           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                            font-size: 14px;
                            font-weight: 500;
-                           transition: all 0.2s ease;
                            cursor: pointer;
-                       "
-                       onmouseover="this.style.background='#e8f4fd'; this.style.borderColor='#1a73e8';"
-                       onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e0e0e0';">
+                       ">
                         <span class="material-symbols-outlined" style="font-size: 20px; color: #1a73e8;">download</span>
                         Download PNG
                     </a>
                 </div>
                 """
-                st.components.v1.html(qr_html, height=160)
+                st.components.v1.html(qr_html, height=150)
                 
             else:
                 st.info("Select configuration to generate SKU")
