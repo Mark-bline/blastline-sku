@@ -492,46 +492,52 @@ def home():
             st.markdown("**Generated SKU**")
             
             if sku:
-                # SKU box with copy functionality
+                # SKU box with light blue background and Material icon
                 sku_html = f"""
+                <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <div id="sku-container" onclick="copySKU()" style="
-                    background: white;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 10px;
-                    padding: 15px 20px;
+                    background: linear-gradient(135deg, #e8f4fd 0%, #d6ebfa 100%);
+                    border: 1px solid #b8d4ed;
+                    border-radius: 12px;
+                    padding: 18px 24px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     cursor: pointer;
                     margin: 10px 0;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.1);
                 ">
                     <span style="
-                        font-family: monospace;
-                        font-size: 20px;
-                        font-weight: 600;
+                        font-family: 'Courier New', monospace;
+                        font-size: 22px;
+                        font-weight: 700;
                         color: #1a73e8;
+                        letter-spacing: 1px;
                     ">{sku}</span>
-                    <div id="copy-area" style="text-align: center;">
-                        <span id="copy-icon" style="font-size: 18px;">📋</span>
-                        <p id="copy-text" style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
+                    <div id="copy-area" style="text-align: center; color: #1a73e8;">
+                        <span id="copy-icon" class="material-symbols-outlined" style="font-size: 24px;">content_copy</span>
+                        <p id="copy-text" style="font-size: 10px; color: #5a9bd5; margin: 4px 0 0 0;">Click to Copy</p>
                     </div>
                 </div>
                 <script>
                 function copySKU() {{
                     navigator.clipboard.writeText("{sku}").then(function() {{
-                        document.getElementById('copy-icon').innerText = '✓';
+                        document.getElementById('copy-icon').innerText = 'check_circle';
+                        document.getElementById('copy-icon').style.color = '#34a853';
                         document.getElementById('copy-text').innerText = 'Copied!';
-                        document.getElementById('copy-text').style.color = '#4CAF50';
+                        document.getElementById('copy-text').style.color = '#34a853';
                         setTimeout(function() {{
-                            document.getElementById('copy-icon').innerText = '📋';
+                            document.getElementById('copy-icon').innerText = 'content_copy';
+                            document.getElementById('copy-icon').style.color = '#1a73e8';
                             document.getElementById('copy-text').innerText = 'Click to Copy';
-                            document.getElementById('copy-text').style.color = '#888';
+                            document.getElementById('copy-text').style.color = '#5a9bd5';
                         }}, 2000);
                     }});
                 }}
                 </script>
                 """
-                st.components.v1.html(sku_html, height=75)
+                st.components.v1.html(sku_html, height=85)
                 
                 # SKU Breakdown
                 st.markdown("**SKU Breakdown**")
@@ -539,40 +545,55 @@ def home():
                 
                 st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
                 
-                # Generated QR Code Section
+                # Generated QR Code Section - QR and Download in single box
                 st.markdown("**Generated QR Code**")
                 
                 qr_base64 = get_qr_code_base64(sku)
+                
+                # Create downloadable QR PNG data as base64
+                qr_buffer = generate_qr_code(sku, size=300)
+                qr_download_base64 = base64.b64encode(qr_buffer.getvalue()).decode()
+                
                 qr_html = f"""
-                <div onclick="copySKU()" style="
+                <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+                <div style="
                     background: white;
                     border: 1px solid #e0e0e0;
-                    border-radius: 10px;
-                    padding: 15px;
-                    display: inline-flex;
+                    border-radius: 12px;
+                    padding: 20px;
+                    display: flex;
                     align-items: center;
-                    gap: 20px;
-                    cursor: pointer;
+                    gap: 25px;
                     margin: 10px 0;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
                 ">
-                    <img src="data:image/png;base64,{qr_base64}" style="width: 90px; height: 90px;">
-                    <div style="text-align: center;">
-                        <span style="font-size: 20px;">📋</span>
-                        <p style="font-size: 10px; color: #888; margin: 2px 0 0 0;">Click to Copy</p>
-                    </div>
+                    <img src="data:image/png;base64,{qr_base64}" style="width: 100px; height: 100px;">
+                    <a href="data:image/png;base64,{qr_download_base64}" 
+                       download="{sku}_QR.png" 
+                       style="
+                           display: flex;
+                           align-items: center;
+                           gap: 8px;
+                           background: #f8f9fa;
+                           border: 1px solid #e0e0e0;
+                           border-radius: 8px;
+                           padding: 12px 18px;
+                           text-decoration: none;
+                           color: #333;
+                           font-size: 14px;
+                           font-weight: 500;
+                           transition: all 0.2s ease;
+                           cursor: pointer;
+                       "
+                       onmouseover="this.style.background='#e8f4fd'; this.style.borderColor='#1a73e8';"
+                       onmouseout="this.style.background='#f8f9fa'; this.style.borderColor='#e0e0e0';">
+                        <span class="material-symbols-outlined" style="font-size: 20px; color: #1a73e8;">download</span>
+                        Download PNG
+                    </a>
                 </div>
                 """
-                st.components.v1.html(qr_html, height=130)
+                st.components.v1.html(qr_html, height=160)
                 
-                # Download PNG button
-                qr_buffer_png = generate_qr_code(sku, size=300)
-                st.download_button(
-                    label="Download PNG  ⬇️",
-                    data=qr_buffer_png,
-                    file_name=f"{sku}_QR.png",
-                    mime="image/png",
-                    key="download_png"
-                )
             else:
                 st.info("Select configuration to generate SKU")
     
