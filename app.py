@@ -542,11 +542,11 @@ def home():
                 """
                 st.components.v1.html(sku_html, height=75)
                 
-                # SKU Breakdown
+                # SKU Breakdown - with proper text wrapping
                 st.markdown("**SKU Breakdown**")
-                st.markdown(f"<p style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; color: #555;'>{sku_description}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: #555; line-height: 1.5; word-wrap: break-word; max-width: 100%;'>{sku_description}</p>", unsafe_allow_html=True)
                 
-                st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                 
                 # Generated QR Code Section - QR and Download in single compact box
                 st.markdown("**Generated QR Code**")
@@ -566,36 +566,36 @@ def home():
                     background: white;
                     border: 1px solid #e0e0e0;
                     border-radius: 12px;
-                    padding: 16px 20px;
+                    padding: 15px;
                     display: inline-flex;
                     align-items: center;
-                    gap: 20px;
+                    gap: 15px;
                     margin: 10px 0;
                 ">
-                    <img src="data:image/png;base64,{qr_base64}" style="width: 80px; height: 80px;">
+                    <img src="data:image/png;base64,{qr_base64}" style="width: 70px; height: 70px;">
                     <a href="data:image/png;base64,{qr_download_base64}" 
                        download="{sku}_QR.png" 
                        style="
                            display: inline-flex;
                            align-items: center;
-                           gap: 6px;
+                           gap: 5px;
                            background: #f8f9fa;
                            border: 1px solid #e0e0e0;
-                           border-radius: 8px;
-                           padding: 10px 14px;
+                           border-radius: 6px;
+                           padding: 8px 12px;
                            text-decoration: none;
                            color: #333;
                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                           font-size: 13px;
+                           font-size: 12px;
                            font-weight: 500;
                            cursor: pointer;
                        ">
-                        <span class="material-symbols-outlined" style="font-size: 18px; color: #1a73e8;">download</span>
+                        <span class="material-symbols-outlined" style="font-size: 16px; color: #1a73e8;">download</span>
                         Download PNG
                     </a>
                 </div>
                 """
-                st.components.v1.html(qr_html, height=130)
+                st.components.v1.html(qr_html, height=115)
                 
             else:
                 st.info("Select configuration to generate SKU")
