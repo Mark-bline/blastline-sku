@@ -6,6 +6,7 @@ import requests
 import base64
 import qrcode
 from io import BytesIO
+import os
 
 # ==================================================
 # CONSTANTS
@@ -14,6 +15,7 @@ COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Single"
 EXTRAS_PER_PAGE = 8
+DATA_FILE = "/data/sku_data.json"
 
 # ==================================================
 # SETUP
@@ -21,19 +23,26 @@ EXTRAS_PER_PAGE = 8
 st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 
 # ==================================================
-# GITHUB STORAGE (DISABLED FOR RENDER)
+# FILE STORAGE (PERSISTENT ON RENDER)
 # ==================================================
-class GithubStorage:
-    """Handles data persistence to GitHub repository (disabled on Render)."""
-
-    def __init__(self):
-        self.can_connect = False
+class FileStorage:
+    def __init__(self, path=DATA_FILE):
+        self.path = path
 
     def load(self):
-        return None
+        if not os.path.exists(self.path):
+            return {"inventory": {}}
+        try:
+            with open(self.path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {"inventory": {}}
 
     def save(self, data):
-        return False
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return True
 
 # ==================================================
 # HELPERS
@@ -88,8 +97,8 @@ def generate_full_matrix(cat_data):
         return pd.DataFrame(columns=["SKU"] + field_names)
 
     combinations = list(itertools.product(*field_combos))
-
     rows = []
+
     for combo in combinations:
         sku = sep.join(combo)
         row = {"SKU": sku}
@@ -115,25 +124,31 @@ def generate_qr_code(text, size=200):
     return buffer
 
 def get_qr_code_base64(text):
-    buffer = generate_qr_code(text)
-    return base64.b64encode(buffer.getvalue()).decode()
+    return base64.b64encode(generate_qr_code(text).getvalue()).decode()
 
-def show_success(msg): st.success(msg)
-def show_error(msg): st.error(msg)
-def show_info(msg): st.info(msg)
+def show_success(m): st.success(m)
+def show_error(m): st.error(m)
+def show_info(m): st.info(m)
 
 # ==================================================
 # INIT
 # ==================================================
+storage = FileStorage()
+
 if "sku_data" not in st.session_state:
-    gh = GithubStorage()
-    st.session_state["sku_data"] = gh.load() or {"inventory": {}}
+    st.session_state["sku_data"] = storage.load()
 
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
 if "extras_page" not in st.session_state:
     st.session_state["extras_page"] = 0
+
+if "confirm_delete_cat" not in st.session_state:
+    st.session_state["confirm_delete_cat"] = None
+
+if "confirm_delete_field" not in st.session_state:
+    st.session_state["confirm_delete_field"] = None
 
 def go(p):
     st.session_state["page"] = p
@@ -147,10 +162,7 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    st.markdown(
-        "<h2 style='text-align:center;'>Blastline SKU Configurator</h2>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<h2 style='text-align:center;'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
 
     inv = st.session_state["sku_data"]["inventory"]
     if not inv:
@@ -164,7 +176,6 @@ def home():
     fields = cat_data["fields"]
     extras = cat_data.get("extras", [])
     sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
-    extras_mode = cat_data.get("settings", {}).get("extras_mode", DEFAULT_EXTRAS_MODE)
 
     sel = {}
     chosen = []
@@ -180,21 +191,19 @@ def home():
                 o = st.selectbox(f, opts, format_func=lambda x: f"{x['code']} - {x['name']}")
                 sel[f] = {"code": o["code"], "name": o["name"]}
 
-    base = sep.join([sel[k]["code"] for k in ordered_fields(fields) if sel[k]["code"]])
-    extras_codes = "".join([c["code"] for c in chosen])
-    sku = base + (sep if base and extras_codes else "") + extras_codes
+    sku = sep.join([sel[k]["code"] for k in ordered_fields(fields) if sel[k]["code"]])
 
     if sku:
-        st.success(f"Generated SKU: {sku}")
+        st.success(sku)
         st.image(generate_qr_code(sku))
     else:
-        st.info("Select options to generate SKU")
+        st.info("Select configuration to generate SKU")
 
 # ==================================================
 # LOGIN
 # ==================================================
 def login():
-    pw = st.text_input("Admin Password", type="password")
+    pw = st.text_input("Password", type="password")
     if st.button("Login"):
         if pw == "admin123":
             go("admin")
@@ -205,15 +214,15 @@ def login():
 # ADMIN
 # ==================================================
 def admin():
-    st.title("Admin Settings")
-    if st.button("← Back"):
+    st.title("⚙️ Admin Settings")
+    if st.button("← Back to Home"):
         go("home")
 
     inv = st.session_state["sku_data"]["inventory"]
-    cat = st.selectbox("Category", list(inv.keys()) if inv else [])
 
-    if st.button("☁️ Save to Cloud"):
-        show_error("Cloud save disabled on Render")
+    if st.button("☁️ Save to Disk", type="primary"):
+        storage.save(st.session_state["sku_data"])
+        show_success("Saved permanently to server disk")
 
 # ==================================================
 # ROUTER
