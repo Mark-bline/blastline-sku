@@ -6,6 +6,7 @@ import requests
 import base64
 import qrcode
 from io import BytesIO
+import os
 
 # ==================================================
 # CONSTANTS
@@ -26,7 +27,6 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 class GithubStorage:
     """Handles data persistence to GitHub repository."""
     
-    import os
 
 DATA_FILE = "/data/sku_data.json"
 
@@ -966,3 +966,4 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+
