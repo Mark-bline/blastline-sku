@@ -395,8 +395,8 @@ def home():
     
     st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
 
-    # Main two-column layout
-    left_col, right_col = st.columns([1, 1], gap="large")
+    # Main two-column layout with divider
+    left_col, divider_col, right_col = st.columns([10, 0.5, 10])
 
     with left_col:
         # Configuration Section
@@ -488,6 +488,19 @@ def home():
     all_names = config_names + extras_names
     sku_description = " - ".join(all_names) if all_names else ""
 
+    # Vertical divider
+    with divider_col:
+        st.markdown(
+            """
+            <div style="
+                border-left: 1px solid #e0e0e0;
+                height: 500px;
+                margin: 0 auto;
+            "></div>
+            """,
+            unsafe_allow_html=True
+        )
+
     with right_col:
         # Right panel with card-style background using container
         with st.container():
@@ -495,26 +508,29 @@ def home():
             st.markdown("**Generated SKU**")
             
             if sku:
-                # SKU box with light blue background - compact width
+                # SKU box - fixed width 260px to match QR box
                 sku_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <style>
                     * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+                    html, body {{ margin: 0; padding: 0; overflow: visible; }}
                 </style>
                 <div id="sku-container" onclick="copySKU()" style="
                     background: #e8f4fd;
                     border: 1px solid #c5dff0;
                     border-radius: 12px;
-                    padding: 16px 24px;
-                    display: inline-flex;
+                    padding: 16px 20px;
+                    display: flex;
                     align-items: center;
-                    gap: 30px;
+                    justify-content: space-between;
                     cursor: pointer;
-                    margin: 10px 0;
+                    width: 260px;
+                    margin: 8px;
+                    box-sizing: border-box;
                 ">
                     <span style="
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        font-size: 18px;
+                        font-size: 17px;
                         font-weight: 600;
                         color: #1a73e8;
                     ">{sku}</span>
@@ -540,7 +556,7 @@ def home():
                 }}
                 </script>
                 """
-                st.components.v1.html(sku_html, height=75)
+                st.components.v1.html(sku_html, height=95)
                 
                 # SKU Breakdown - with proper text wrapping
                 st.markdown("**SKU Breakdown**")
@@ -548,7 +564,7 @@ def home():
                 
                 st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                 
-                # Generated QR Code Section - QR and Download in single compact box
+                # Generated QR Code Section - same width 260px as SKU box
                 st.markdown("**Generated QR Code**")
                 
                 qr_base64 = get_qr_code_base64(sku)
@@ -561,16 +577,19 @@ def home():
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <style>
                     * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+                    html, body {{ margin: 0; padding: 0; overflow: visible; }}
                 </style>
                 <div style="
                     background: white;
                     border: 1px solid #e0e0e0;
                     border-radius: 12px;
-                    padding: 15px;
-                    display: inline-flex;
+                    padding: 16px;
+                    display: flex;
                     align-items: center;
-                    gap: 15px;
-                    margin: 10px 0;
+                    gap: 16px;
+                    width: 260px;
+                    margin: 8px;
+                    box-sizing: border-box;
                 ">
                     <img src="data:image/png;base64,{qr_base64}" style="width: 70px; height: 70px;">
                     <a href="data:image/png;base64,{qr_download_base64}" 
@@ -595,7 +614,7 @@ def home():
                     </a>
                 </div>
                 """
-                st.components.v1.html(qr_html, height=115)
+                st.components.v1.html(qr_html, height=130)
                 
             else:
                 st.info("Select configuration to generate SKU")
