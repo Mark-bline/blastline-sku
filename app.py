@@ -487,16 +487,7 @@ def home():
 
     # Vertical divider
     with divider_col:
-        st.markdown(
-            """
-            <div style="
-                border-left: 1px solid #e0e0e0;
-                height: 500px;
-                margin: 0 auto;
-            "></div>
-            """,
-            unsafe_allow_html=True
-        )
+        pass
 
     with right_col:
         # Right panel with card-style background using container
@@ -966,4 +957,5 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+
 
