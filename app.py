@@ -456,47 +456,40 @@ def home():
         if extras:
             sorted_extras = sorted(extras, key=lambda x: x.get("order", 999))
             
-            # 5-column grid layout for extras
             if extras_mode == "Single":
-                # For single selection, use radio-style but in grid
-                extra_options = [{"name": "None", "code": ""}] + sorted_extras
+                # Single selection mode - use radio button in horizontal layout
+                extra_options = ["None"] + [e["name"] for e in sorted_extras]
                 
-                # Create 5-column grid
-                num_cols = 5
-                cols = st.columns(num_cols)
+                selected_name = st.radio(
+                    "Select extra:",
+                    options=extra_options,
+                    horizontal=True,
+                    key="single_extra_radio",
+                    label_visibility="collapsed"
+                )
                 
-                # Initialize selected index
-                if "selected_extra_idx" not in st.session_state:
-                    st.session_state["selected_extra_idx"] = 0
-                
-                for idx, e in enumerate(extra_options):
-                    col_idx = idx % num_cols
-                    with cols[col_idx]:
-                        is_selected = st.checkbox(
-                            e["name"], 
-                            key=f"extra_single_{idx}",
-                            value=(idx == st.session_state.get("selected_extra_idx", 0))
-                        )
-                        if is_selected and idx != st.session_state.get("selected_extra_idx", 0):
-                            # Uncheck others by updating session state
-                            st.session_state["selected_extra_idx"] = idx
-                            st.rerun()
-                
-                # Get the selected extra
-                selected_idx = st.session_state.get("selected_extra_idx", 0)
-                if selected_idx > 0 and extra_options[selected_idx].get("code"):
-                    chosen.append({"code": extra_options[selected_idx]["code"], "name": extra_options[selected_idx]["name"]})
+                # Find the selected extra and add to chosen
+                if selected_name != "None":
+                    for e in sorted_extras:
+                        if e["name"] == selected_name and e.get("code"):
+                            chosen.append({"code": e["code"], "name": e["name"]})
+                            break
             else:
-                # Multiple selection with checkboxes in 5-column grid
+                # Multiple selection mode - 5-column grid with proper rows
                 num_cols = 5
-                cols = st.columns(num_cols)
+                total_extras = len(sorted_extras)
+                num_rows = (total_extras + num_cols - 1) // num_cols
                 
-                for idx, e in enumerate(sorted_extras):
-                    col_idx = idx % num_cols
-                    with cols[col_idx]:
-                        if st.checkbox(e["name"], key=f"extra_{idx}"):
-                            if e.get("code"):
-                                chosen.append({"code": e["code"], "name": e["name"]})
+                for row in range(num_rows):
+                    cols = st.columns(num_cols)
+                    for col_idx in range(num_cols):
+                        extra_idx = row * num_cols + col_idx
+                        if extra_idx < total_extras:
+                            e = sorted_extras[extra_idx]
+                            with cols[col_idx]:
+                                if st.checkbox(e["name"], key=f"extra_{extra_idx}"):
+                                    if e.get("code"):
+                                        chosen.append({"code": e["code"], "name": e["name"]})
         else:
             st.info("No extras configured")
 
