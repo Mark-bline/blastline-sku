@@ -365,7 +365,7 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    # Pulsating green dot CSS + Header
+    # Pulsating green dot CSS + Header + Responsive styles
     st.markdown("""
         <style>
         @keyframes pulse {
@@ -390,6 +390,12 @@ def home():
             color: #333;
             margin-bottom: 12px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        /* Hide divider on mobile */
+        @media (max-width: 768px) {
+            .desktop-divider {
+                display: none !important;
+            }
         }
         </style>
         <div class="pulse-dot"></div>
@@ -421,8 +427,8 @@ def home():
     
     st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
 
-    # Main two-column layout with divider
-    left_col, divider_col, right_col = st.columns([10, 0.5, 10])
+    # Main two-column layout (no divider column - use CSS border instead)
+    left_col, right_col = st.columns([1, 1], gap="large")
 
     with left_col:
         # Configuration Section - larger subheading
@@ -502,19 +508,6 @@ def home():
     extras_names = [c["name"] for c in chosen]
     all_names = config_names + extras_names
     sku_description = " - ".join(all_names) if all_names else ""
-
-    # Vertical divider
-    with divider_col:
-        st.markdown(
-            """
-            <div style="
-                border-left: 1px solid #e0e0e0;
-                height: 500px;
-                margin: 0 auto;
-            "></div>
-            """,
-            unsafe_allow_html=True
-        )
 
     with right_col:
         # Right panel with card-style background using container
