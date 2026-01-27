@@ -6,7 +6,6 @@ import requests
 import base64
 import qrcode
 from io import BytesIO
-import os
 
 # ==================================================
 # CONSTANTS
@@ -27,37 +26,41 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 class GithubStorage:
     """Handles data persistence to GitHub repository."""
     
-
-DATA_FILE = "/data/sku_data.json"
-
-class GithubStorage:
-    """
-    Disk-backed persistent storage.
-    Class name intentionally preserved so the rest of the
-    971-line application remains completely untouched.
-    """
-
     def __init__(self):
-        self.path = DATA_FILE
-        self.can_connect = True  # preserve existing logic paths
+        if "github" in st.secrets:
+            g = st.secrets["github"]
+            self.api_url = f"https://api.github.com/repos/{g['owner']}/{g['repo']}/contents/{g['filepath']}"
+            self.headers = {"Authorization": f"token {g['token']}"}
+            self.branch = g["branch"]
+            self.can_connect = True
+        else:
+            self.can_connect = False
 
     def load(self):
-        if not os.path.exists(self.path):
-            return {"inventory": {}}
-        try:
-            with open(self.path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {"inventory": {}}
+        """Load configuration data from GitHub."""
+        if not self.can_connect:
+            return None
+        r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
+        if r.status_code == 200:
+            st.session_state["github_sha"] = r.json()["sha"]
+            return json.loads(base64.b64decode(r.json()["content"]).decode())
+        return None
 
     def save(self, data):
-        try:
-            os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-            return True
-        except Exception:
+        """Save configuration data to GitHub."""
+        if not self.can_connect:
             return False
+        payload = {
+            "message": "Update SKU Config",
+            "content": base64.b64encode(json.dumps(data, indent=2).encode()).decode(),
+            "branch": self.branch,
+            "sha": st.session_state.get("github_sha")
+        }
+        r = requests.put(self.api_url, headers=self.headers, json=payload)
+        if r.status_code in (200, 201):
+            st.session_state["github_sha"] = r.json()["content"]["sha"]
+            return True
+        return False
 
 # ==================================================
 # HELPERS
@@ -366,6 +369,36 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
+    # Pulsating green dot CSS + Header
+    st.markdown("""
+        <style>
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+        .pulse-dot {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            z-index: 9999;
+        }
+        .subheading {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        </style>
+        <div class="pulse-dot"></div>
+    """, unsafe_allow_html=True)
+
     # Centered Header
     st.markdown("<h2 style='text-align: center; margin-bottom: 5px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>Blastline SKU Configurator</h2>", unsafe_allow_html=True)
 
@@ -396,8 +429,8 @@ def home():
     left_col, divider_col, right_col = st.columns([10, 0.5, 10])
 
     with left_col:
-        # Configuration Section
-        st.markdown("**Configuration**")
+        # Configuration Section - larger subheading
+        st.markdown("<p class='subheading'>Configuration</p>", unsafe_allow_html=True)
         
         # Create a narrower container for dropdowns
         config_inner, config_spacer = st.columns([3, 1])
@@ -421,57 +454,53 @@ def home():
         
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
         
-        # Extras Section
-        st.markdown("**Extras**")
+        # Extras Section - larger subheading
+        st.markdown("<p class='subheading'>Extras</p>", unsafe_allow_html=True)
         
         if extras:
             sorted_extras = sorted(extras, key=lambda x: x.get("order", 999))
             
-            total_extras = len(sorted_extras)
-            total_pages = (total_extras - 1) // EXTRAS_PER_PAGE + 1 if total_extras > 0 else 1
-            current_page = st.session_state.get("extras_page", 0)
-            
-            if current_page >= total_pages:
-                current_page = total_pages - 1
-                st.session_state["extras_page"] = current_page
-            
-            start_idx = current_page * EXTRAS_PER_PAGE
-            end_idx = min(start_idx + EXTRAS_PER_PAGE, total_extras)
-            page_extras = sorted_extras[start_idx:end_idx]
-            
+            # 5-column grid layout for extras
             if extras_mode == "Single":
-                extra_options = [{"name": "None", "code": ""}] + page_extras
-                extra_labels = [e["name"] for e in extra_options]
+                # For single selection, use radio-style but in grid
+                extra_options = [{"name": "None", "code": ""}] + sorted_extras
                 
-                selected = st.radio(
-                    "Select extra:",
-                    options=range(len(extra_options)),
-                    format_func=lambda i: extra_labels[i],
-                    key="single_extra_selector",
-                    label_visibility="collapsed"
-                )
+                # Create 5-column grid
+                num_cols = 5
+                cols = st.columns(num_cols)
                 
-                if selected > 0 and extra_options[selected].get("code"):
-                    chosen.append({"code": extra_options[selected]["code"], "name": extra_options[selected]["name"]})
+                # Initialize selected index
+                if "selected_extra_idx" not in st.session_state:
+                    st.session_state["selected_extra_idx"] = 0
+                
+                for idx, e in enumerate(extra_options):
+                    col_idx = idx % num_cols
+                    with cols[col_idx]:
+                        is_selected = st.checkbox(
+                            e["name"], 
+                            key=f"extra_single_{idx}",
+                            value=(idx == st.session_state.get("selected_extra_idx", 0))
+                        )
+                        if is_selected and idx != st.session_state.get("selected_extra_idx", 0):
+                            # Uncheck others by updating session state
+                            st.session_state["selected_extra_idx"] = idx
+                            st.rerun()
+                
+                # Get the selected extra
+                selected_idx = st.session_state.get("selected_extra_idx", 0)
+                if selected_idx > 0 and extra_options[selected_idx].get("code"):
+                    chosen.append({"code": extra_options[selected_idx]["code"], "name": extra_options[selected_idx]["name"]})
             else:
-                for idx in range(len(page_extras)):
-                    e = page_extras[idx]
-                    actual_idx = start_idx + idx
-                    if st.checkbox(e["name"], key=f"extra_{actual_idx}"):
-                        if e.get("code"):
-                            chosen.append({"code": e["code"], "name": e["name"]})
-            
-            # Pagination arrows at bottom
-            if total_pages > 1:
-                prev_col, next_col, spacer = st.columns([1, 1, 4])
-                with prev_col:
-                    if st.button("‹", disabled=(current_page == 0), key="prev_page"):
-                        st.session_state["extras_page"] = current_page - 1
-                        st.rerun()
-                with next_col:
-                    if st.button("›", disabled=(current_page == total_pages - 1), key="next_page"):
-                        st.session_state["extras_page"] = current_page + 1
-                        st.rerun()
+                # Multiple selection with checkboxes in 5-column grid
+                num_cols = 5
+                cols = st.columns(num_cols)
+                
+                for idx, e in enumerate(sorted_extras):
+                    col_idx = idx % num_cols
+                    with cols[col_idx]:
+                        if st.checkbox(e["name"], key=f"extra_{idx}"):
+                            if e.get("code"):
+                                chosen.append({"code": e["code"], "name": e["name"]})
         else:
             st.info("No extras configured")
 
@@ -487,16 +516,25 @@ def home():
 
     # Vertical divider
     with divider_col:
-        pass
+        st.markdown(
+            """
+            <div style="
+                border-left: 1px solid #e0e0e0;
+                height: 500px;
+                margin: 0 auto;
+            "></div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with right_col:
         # Right panel with card-style background using container
         with st.container():
-            # Generated SKU Section
-            st.markdown("**Generated SKU**")
+            # Generated SKU Section - larger subheading
+            st.markdown("<p class='subheading'>Generated SKU</p>", unsafe_allow_html=True)
             
             if sku:
-                # SKU box - fixed width 260px to match QR box
+                # SKU box - dynamic width based on content
                 sku_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <style>
@@ -508,21 +546,23 @@ def home():
                     border: 1px solid #c5dff0;
                     border-radius: 12px;
                     padding: 16px 20px;
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
-                    justify-content: space-between;
+                    gap: 20px;
                     cursor: pointer;
-                    width: 260px;
                     margin: 8px;
                     box-sizing: border-box;
+                    min-width: 200px;
+                    max-width: 100%;
                 ">
                     <span style="
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         font-size: 17px;
                         font-weight: 600;
                         color: #1a73e8;
+                        word-break: break-all;
                     ">{sku}</span>
-                    <div id="copy-area" style="text-align: center; color: #1a73e8;">
+                    <div id="copy-area" style="text-align: center; color: #1a73e8; flex-shrink: 0;">
                         <span id="copy-icon" class="material-symbols-outlined" style="font-size: 20px;">content_copy</span>
                         <p id="copy-text" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 9px; color: #5a9bd5; margin: 2px 0 0 0;">Click to Copy</p>
                     </div>
@@ -546,14 +586,14 @@ def home():
                 """
                 st.components.v1.html(sku_html, height=95)
                 
-                # SKU Breakdown - with proper text wrapping
-                st.markdown("**SKU Breakdown**")
+                # SKU Breakdown - larger subheading
+                st.markdown("<p class='subheading'>SKU Breakdown</p>", unsafe_allow_html=True)
                 st.markdown(f"<p style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: #555; line-height: 1.5; word-wrap: break-word; max-width: 100%;'>{sku_description}</p>", unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                 
-                # Generated QR Code Section - same width 260px as SKU box
-                st.markdown("**Generated QR Code**")
+                # Generated QR Code Section - larger subheading, dynamic width
+                st.markdown("<p class='subheading'>Generated QR Code</p>", unsafe_allow_html=True)
                 
                 qr_base64 = get_qr_code_base64(sku)
                 
@@ -572,10 +612,9 @@ def home():
                     border: 1px solid #e0e0e0;
                     border-radius: 12px;
                     padding: 16px;
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
                     gap: 16px;
-                    width: 260px;
                     margin: 8px;
                     box-sizing: border-box;
                 ">
@@ -708,7 +747,7 @@ def admin():
                 st.session_state["confirm_delete_cat"] = cat
                 st.rerun()
 
-    tab1, tab2, tab3, tab4 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "⚙️ Category Settings", "📊 Export Matrix"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🛠️ Fields Configuration", "🎁 Extras Management", "⚙️ Category Settings", "📊 Export Matrix", "💾 Backup & Restore"])
 
     # ---------- FIELDS CONFIG ----------
     with tab1:
@@ -936,6 +975,113 @@ def admin():
             else:
                 st.warning("No fields configured yet. Add fields in the Fields Configuration tab.")
 
+    # ---------- BACKUP & RESTORE ----------
+    with tab5:
+        st.markdown("### 💾 Database Backup & Restore")
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📤 Export Database")
+            st.write("Download a complete backup of all categories, fields, extras, and settings.")
+            
+            # Prepare JSON data
+            backup_data = json.dumps(st.session_state["sku_data"], indent=2)
+            
+            # Show summary
+            total_categories = len(st.session_state["sku_data"].get("inventory", {}))
+            st.info(f"📁 **{total_categories}** categories in database")
+            
+            # Download button
+            st.download_button(
+                label="⬇️ Download Backup (JSON)",
+                data=backup_data,
+                file_name=f"blastline_sku_backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                type="primary",
+                use_container_width=True
+            )
+            
+            st.caption("💡 Tip: Keep regular backups before making major changes")
+        
+        with col2:
+            st.markdown("#### 📥 Import Database")
+            st.write("Restore from a previously exported backup file.")
+            
+            uploaded_file = st.file_uploader(
+                "Choose backup file",
+                type=["json"],
+                help="Upload a JSON backup file previously exported from this app"
+            )
+            
+            if uploaded_file is not None:
+                try:
+                    # Parse the uploaded JSON
+                    import_data = json.load(uploaded_file)
+                    
+                    # Validate structure
+                    if "inventory" in import_data:
+                        num_categories = len(import_data["inventory"])
+                        st.success(f"✅ Valid backup file detected: **{num_categories}** categories")
+                        
+                        # Show preview
+                        with st.expander("Preview categories"):
+                            for cat_name in import_data["inventory"].keys():
+                                cat_data = import_data["inventory"][cat_name]
+                                num_fields = len(cat_data.get("fields", {}))
+                                num_extras = len(cat_data.get("extras", []))
+                                st.write(f"• **{cat_name}**: {num_fields} fields, {num_extras} extras")
+                        
+                        # Import options
+                        import_mode = st.radio(
+                            "Import mode:",
+                            ["🔄 Replace all (overwrites existing data)", "➕ Merge (adds new, keeps existing)"],
+                            key="import_mode"
+                        )
+                        
+                        st.warning("⚠️ **Warning:** This action cannot be undone. Make sure you have a backup!")
+                        
+                        if st.button("🚀 Import Database", type="primary", use_container_width=True):
+                            if "Replace" in import_mode:
+                                # Full replacement
+                                st.session_state["sku_data"] = import_data
+                                # Save to disk
+                                if GithubStorage().save(st.session_state["sku_data"]):
+                                    show_success(f"✅ Database replaced successfully! Imported {num_categories} categories.")
+                                    st.rerun()
+                                else:
+                                    show_error("Failed to save imported data to disk.")
+                            else:
+                                # Merge mode
+                                existing_inv = st.session_state["sku_data"].get("inventory", {})
+                                imported_inv = import_data.get("inventory", {})
+                                
+                                added = 0
+                                skipped = 0
+                                for cat_name, cat_data in imported_inv.items():
+                                    if cat_name not in existing_inv:
+                                        existing_inv[cat_name] = cat_data
+                                        added += 1
+                                    else:
+                                        skipped += 1
+                                
+                                st.session_state["sku_data"]["inventory"] = existing_inv
+                                
+                                # Save to disk
+                                if GithubStorage().save(st.session_state["sku_data"]):
+                                    show_success(f"✅ Merge complete! Added {added} new categories, skipped {skipped} existing.")
+                                    st.rerun()
+                                else:
+                                    show_error("Failed to save merged data to disk.")
+                    else:
+                        show_error("❌ Invalid backup file format. Missing 'inventory' key.")
+                        
+                except json.JSONDecodeError:
+                    show_error("❌ Invalid JSON file. Please upload a valid backup file.")
+                except Exception as e:
+                    show_error(f"❌ Error reading file: {str(e)}")
+
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1, 3, 1])
@@ -957,5 +1103,3 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
-
-
