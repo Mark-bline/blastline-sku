@@ -23,44 +23,39 @@ st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
 # ==================================================
 # GITHUB STORAGE
 # ==================================================
+# STORAGE (Disk-based for Render)
+# ==================================================
+DATA_FILE = "/data/sku_data.json"
+
 class GithubStorage:
-    """Handles data persistence to GitHub repository."""
-    
+    """
+    Disk-backed persistent storage.
+    Class name preserved so the rest of the application remains unchanged.
+    """
+
     def __init__(self):
-        if "github" in st.secrets:
-            g = st.secrets["github"]
-            self.api_url = f"https://api.github.com/repos/{g['owner']}/{g['repo']}/contents/{g['filepath']}"
-            self.headers = {"Authorization": f"token {g['token']}"}
-            self.branch = g["branch"]
-            self.can_connect = True
-        else:
-            self.can_connect = False
+        self.path = DATA_FILE
+        self.can_connect = True  # Always true for disk storage
 
     def load(self):
-        """Load configuration data from GitHub."""
-        if not self.can_connect:
-            return None
-        r = requests.get(self.api_url, headers=self.headers, params={"ref": self.branch})
-        if r.status_code == 200:
-            st.session_state["github_sha"] = r.json()["sha"]
-            return json.loads(base64.b64decode(r.json()["content"]).decode())
-        return None
+        """Load configuration data from disk."""
+        if not os.path.exists(self.path):
+            return {"inventory": {}}
+        try:
+            with open(self.path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {"inventory": {}}
 
     def save(self, data):
-        """Save configuration data to GitHub."""
-        if not self.can_connect:
-            return False
-        payload = {
-            "message": "Update SKU Config",
-            "content": base64.b64encode(json.dumps(data, indent=2).encode()).decode(),
-            "branch": self.branch,
-            "sha": st.session_state.get("github_sha")
-        }
-        r = requests.put(self.api_url, headers=self.headers, json=payload)
-        if r.status_code in (200, 201):
-            st.session_state["github_sha"] = r.json()["content"]["sha"]
+        """Save configuration data to disk."""
+        try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            with open(self.path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
             return True
-        return False
+        except Exception:
+            return False
 
 # ==================================================
 # HELPERS
