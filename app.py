@@ -7,6 +7,7 @@ import base64
 import qrcode
 import os
 from io import BytesIO
+from PIL import Image
 
 # ==================================================
 # CONSTANTS
@@ -15,6 +16,7 @@ COPY_BOX_HEIGHT = 160
 DEFAULT_SEPARATOR = "-"
 DEFAULT_EXTRAS_MODE = "Single"
 EXTRAS_PER_PAGE = 8
+MAX_SKU_HISTORY = 15  # Maximum number of SKUs to keep in history
 
 # ==================================================
 # SETUP
@@ -351,10 +353,102 @@ if "confirm_delete_cat" not in st.session_state:
 if "confirm_delete_field" not in st.session_state:
     st.session_state["confirm_delete_field"] = None
 
+if "sku_history" not in st.session_state:
+    st.session_state["sku_history"] = []
+
 def go(p):
     """Navigate to a different page."""
     st.session_state["page"] = p
     st.rerun()
+
+def add_to_sku_history(sku, description, category):
+    """Add a SKU to history (avoid duplicates, limit size)."""
+    if not sku:
+        return
+    
+    history = st.session_state.get("sku_history", [])
+    
+    # Create history entry
+    entry = {
+        "sku": sku,
+        "description": description,
+        "category": category,
+        "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+    }
+    
+    # Remove duplicate if exists
+    history = [h for h in history if h["sku"] != sku]
+    
+    # Add to beginning
+    history.insert(0, entry)
+    
+    # Limit size
+    if len(history) > MAX_SKU_HISTORY:
+        history = history[:MAX_SKU_HISTORY]
+    
+    st.session_state["sku_history"] = history
+
+def decode_sku(sku_code, inventory):
+    """Decode a SKU code and return breakdown."""
+    results = []
+    
+    for cat_name, cat_data in inventory.items():
+        normalize_fields(cat_data)
+        fields = cat_data.get("fields", {})
+        extras = cat_data.get("extras", [])
+        sep = cat_data.get("settings", {}).get("separator", DEFAULT_SEPARATOR)
+        
+        # Try to match this SKU against this category
+        remaining = sku_code
+        matched_parts = []
+        matched = True
+        
+        for field_name in ordered_fields(fields):
+            opts = fields[field_name].get("options", [])
+            field_matched = False
+            
+            for opt in opts:
+                if opt.get("type") == "text":
+                    continue
+                code = opt.get("code", "")
+                if code and remaining.startswith(code):
+                    matched_parts.append({
+                        "field": field_name,
+                        "code": code,
+                        "name": opt.get("name", "")
+                    })
+                    remaining = remaining[len(code):]
+                    # Remove separator if present
+                    if remaining.startswith(sep):
+                        remaining = remaining[len(sep):]
+                    field_matched = True
+                    break
+            
+            if not field_matched and opts and not (opts[0].get("type") == "text"):
+                matched = False
+                break
+        
+        # Check for extras
+        matched_extras = []
+        for extra in extras:
+            code = extra.get("code", "")
+            if code and code in remaining:
+                matched_extras.append({
+                    "field": "Extra",
+                    "code": code,
+                    "name": extra.get("name", "")
+                })
+                remaining = remaining.replace(code, "", 1)
+        
+        if matched and matched_parts:
+            results.append({
+                "category": cat_name,
+                "parts": matched_parts,
+                "extras": matched_extras,
+                "remaining": remaining.strip(sep)
+            })
+    
+    return results
 
 # ==================================================
 # HOME
@@ -364,6 +458,90 @@ def home():
     with st.sidebar:
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
+        
+        st.markdown("---")
+        
+        # SKU History Section
+        st.markdown("### 📋 Recent SKUs")
+        
+        history = st.session_state.get("sku_history", [])
+        if history:
+            for idx, entry in enumerate(history[:10]):  # Show last 10
+                with st.container():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.markdown(f"**{entry['sku']}**")
+                        st.caption(f"{entry['category']} • {entry['timestamp']}")
+                    with col2:
+                        if st.button("📋", key=f"copy_hist_{idx}", help="Copy SKU"):
+                            st.toast(f"Copied: {entry['sku']}")
+                    st.markdown("<hr style='margin: 5px 0; border: none; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
+            
+            if st.button("🗑️ Clear History", use_container_width=True):
+                st.session_state["sku_history"] = []
+                st.rerun()
+        else:
+            st.info("No recent SKUs yet")
+        
+        st.markdown("---")
+        
+        # SKU Decoder Section
+        st.markdown("### 🔍 SKU Decoder")
+        decode_input = st.text_input("Enter SKU to decode", placeholder="e.g., BL20MSF0", key="decoder_input")
+        
+        if decode_input:
+            inv = st.session_state["sku_data"]["inventory"]
+            results = decode_sku(decode_input, inv)
+            
+            if results:
+                for result in results:
+                    st.success(f"**Category:** {result['category']}")
+                    for part in result['parts']:
+                        st.markdown(f"• **{part['field']}:** {part['code']} = {part['name']}")
+                    for extra in result.get('extras', []):
+                        st.markdown(f"• **Extra:** {extra['code']} = {extra['name']}")
+                    if result.get('remaining'):
+                        st.warning(f"Unmatched: {result['remaining']}")
+            else:
+                st.error("Could not decode SKU. Check if it's valid.")
+        
+        st.markdown("---")
+        
+        # QR Scanner Section
+        st.markdown("### 📱 QR Scanner")
+        
+        uploaded_qr = st.file_uploader("Upload QR image", type=["png", "jpg", "jpeg"], key="qr_upload")
+        
+        if uploaded_qr:
+            try:
+                from PIL import Image
+                from pyzbar.pyzbar import decode as decode_qr
+                
+                img = Image.open(uploaded_qr)
+                decoded_objects = decode_qr(img)
+                
+                if decoded_objects:
+                    qr_data = decoded_objects[0].data.decode('utf-8')
+                    st.success(f"**Scanned SKU:** {qr_data}")
+                    
+                    # Auto-decode the scanned SKU
+                    inv = st.session_state["sku_data"]["inventory"]
+                    results = decode_sku(qr_data, inv)
+                    
+                    if results:
+                        for result in results:
+                            st.info(f"**Category:** {result['category']}")
+                            for part in result['parts']:
+                                st.markdown(f"• **{part['field']}:** {part['code']} = {part['name']}")
+                            for extra in result.get('extras', []):
+                                st.markdown(f"• **Extra:** {extra['code']} = {extra['name']}")
+                else:
+                    st.error("No QR code found in image")
+            except ImportError:
+                st.warning("QR scanning requires pyzbar library. Upload feature limited.")
+                st.info("You can manually enter the SKU in the decoder above.")
+            except Exception as e:
+                st.error(f"Error scanning QR: {str(e)}")
 
     # Pulsating green dot CSS + Header + Responsive styles
     st.markdown("""
@@ -624,6 +802,13 @@ def home():
                 </div>
                 """
                 st.components.v1.html(qr_html, height=130)
+                
+                # Save to History button
+                st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                if st.button("💾 Save to History", key="save_history", use_container_width=False):
+                    add_to_sku_history(sku, sku_description, cat)
+                    st.toast(f"✅ Saved: {sku}")
+                    st.rerun()
                 
             else:
                 st.info("Select configuration to generate SKU")
