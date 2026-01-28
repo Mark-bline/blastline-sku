@@ -456,67 +456,28 @@ def decode_sku(sku_code, inventory):
 def home():
     """Main SKU configuration page."""
     with st.sidebar:
+        st.markdown("### 🧭 Navigation")
+        
+        if st.button("🏠 SKU Generator", use_container_width=True):
+            st.session_state["page"] = "home"
+            st.rerun()
+        
+        if st.button("📋 SKU History", use_container_width=True):
+            st.session_state["page"] = "history"
+            st.rerun()
+        
+        if st.button("🔍 SKU Decoder", use_container_width=True):
+            st.session_state["page"] = "decoder"
+            st.rerun()
+        
+        if st.button("📱 QR Scanner", use_container_width=True):
+            st.session_state["page"] = "scanner"
+            st.rerun()
+        
+        st.markdown("---")
+        
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
-        
-        st.markdown("---")
-        
-        # SKU History Section
-        st.markdown("### 📋 Recent SKUs")
-        
-        history = st.session_state.get("sku_history", [])
-        if history:
-            for idx, entry in enumerate(history[:10]):  # Show last 10
-                with st.container():
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.markdown(f"**{entry['sku']}**")
-                        st.caption(f"{entry['category']} • {entry['timestamp']}")
-                    with col2:
-                        if st.button("📋", key=f"copy_hist_{idx}", help="Copy SKU"):
-                            st.toast(f"Copied: {entry['sku']}")
-                    st.markdown("<hr style='margin: 5px 0; border: none; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
-            
-            if st.button("🗑️ Clear History", use_container_width=True):
-                st.session_state["sku_history"] = []
-                st.rerun()
-        else:
-            st.info("No recent SKUs yet")
-        
-        st.markdown("---")
-        
-        # SKU Decoder Section
-        st.markdown("### 🔍 SKU Decoder")
-        decode_input = st.text_input("Enter SKU to decode", placeholder="e.g., BL20MSF0", key="decoder_input")
-        
-        if decode_input:
-            inv = st.session_state["sku_data"]["inventory"]
-            results = decode_sku(decode_input, inv)
-            
-            if results:
-                for result in results:
-                    st.success(f"**Category:** {result['category']}")
-                    for part in result['parts']:
-                        st.markdown(f"• **{part['field']}:** {part['code']} = {part['name']}")
-                    for extra in result.get('extras', []):
-                        st.markdown(f"• **Extra:** {extra['code']} = {extra['name']}")
-                    if result.get('remaining'):
-                        st.warning(f"Unmatched: {result['remaining']}")
-            else:
-                st.error("Could not decode SKU. Check if it's valid.")
-        
-        st.markdown("---")
-        
-        # QR Scanner Section - Using camera or manual entry
-        st.markdown("### 📱 Scan QR Code")
-        st.info("📸 Use your phone's camera app to scan any QR code, then paste the SKU above in the decoder.")
-        
-        # Alternative: Camera input (works on mobile)
-        camera_input = st.camera_input("Or take a photo of QR code", key="qr_camera")
-        
-        if camera_input:
-            st.warning("📝 QR detected! Please manually enter the SKU code in the **SKU Decoder** field above.")
-            st.image(camera_input, caption="Captured image", width=150)
 
     # Pulsating green dot CSS + Header + Responsive styles
     st.markdown("""
@@ -1237,6 +1198,222 @@ def admin():
             go("home")
 
 # ==================================================
+# HISTORY PAGE
+# ==================================================
+def history_page():
+    """SKU History page."""
+    with st.sidebar:
+        st.markdown("### 🧭 Navigation")
+        if st.button("🏠 SKU Generator", use_container_width=True):
+            go("home")
+        if st.button("📋 SKU History", use_container_width=True, type="primary"):
+            pass
+        if st.button("🔍 SKU Decoder", use_container_width=True):
+            go("decoder")
+        if st.button("📱 QR Scanner", use_container_width=True):
+            go("scanner")
+        st.markdown("---")
+        if st.button("⚙️ Settings", use_container_width=True):
+            go("login")
+    
+    st.markdown("<h2 style='text-align: center;'>📋 SKU History</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666;'>Recently generated SKU codes</p>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    history = st.session_state.get("sku_history", [])
+    
+    if history:
+        # Create a nice table view
+        for idx, entry in enumerate(history):
+            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+            
+            with col1:
+                st.markdown(f"### `{entry['sku']}`")
+            with col2:
+                st.markdown(f"**{entry['category']}**")
+            with col3:
+                st.caption(entry['timestamp'])
+            with col4:
+                # Copy to clipboard using HTML/JS
+                copy_html = f"""
+                <button onclick="navigator.clipboard.writeText('{entry['sku']}'); this.innerText='✓ Copied'" 
+                    style="background: #e8f4fd; border: 1px solid #1a73e8; border-radius: 6px; 
+                    padding: 5px 10px; cursor: pointer; color: #1a73e8; font-size: 12px;">
+                    📋 Copy
+                </button>
+                """
+                st.markdown(copy_html, unsafe_allow_html=True)
+            
+            # Show description
+            if entry.get('description'):
+                st.caption(f"↳ {entry['description']}")
+            
+            st.markdown("<hr style='margin: 10px 0; border: none; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
+        
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("🗑️ Clear All History", type="secondary"):
+                st.session_state["sku_history"] = []
+                st.rerun()
+    else:
+        st.info("📭 No SKU history yet. Generate some SKUs to see them here!")
+        if st.button("🏠 Go to SKU Generator"):
+            go("home")
+
+# ==================================================
+# DECODER PAGE
+# ==================================================
+def decoder_page():
+    """SKU Decoder page."""
+    with st.sidebar:
+        st.markdown("### 🧭 Navigation")
+        if st.button("🏠 SKU Generator", use_container_width=True):
+            go("home")
+        if st.button("📋 SKU History", use_container_width=True):
+            go("history")
+        if st.button("🔍 SKU Decoder", use_container_width=True, type="primary"):
+            pass
+        if st.button("📱 QR Scanner", use_container_width=True):
+            go("scanner")
+        st.markdown("---")
+        if st.button("⚙️ Settings", use_container_width=True):
+            go("login")
+    
+    st.markdown("<h2 style='text-align: center;'>🔍 SKU Decoder</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666;'>Enter a SKU code to see what each part means</p>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Center the input
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        decode_input = st.text_input(
+            "Enter SKU Code",
+            placeholder="e.g., BL20MSF0",
+            key="decoder_main_input",
+            label_visibility="collapsed"
+        )
+        
+        st.markdown("<p style='text-align: center; font-size: 12px; color: #888;'>Type or paste any SKU code above</p>", unsafe_allow_html=True)
+    
+    if decode_input:
+        st.markdown("---")
+        st.markdown(f"### Decoding: `{decode_input}`")
+        
+        inv = st.session_state["sku_data"]["inventory"]
+        results = decode_sku(decode_input, inv)
+        
+        if results:
+            for result in results:
+                st.success(f"✅ **Category Matched:** {result['category']}")
+                
+                st.markdown("#### Component Breakdown:")
+                
+                # Create a nice breakdown table
+                for part in result['parts']:
+                    col1, col2, col3 = st.columns([1, 1, 2])
+                    with col1:
+                        st.markdown(f"**{part['field']}**")
+                    with col2:
+                        st.code(part['code'])
+                    with col3:
+                        st.markdown(part['name'])
+                
+                if result.get('extras'):
+                    st.markdown("#### Extras:")
+                    for extra in result['extras']:
+                        col1, col2, col3 = st.columns([1, 1, 2])
+                        with col1:
+                            st.markdown("**Extra**")
+                        with col2:
+                            st.code(extra['code'])
+                        with col3:
+                            st.markdown(extra['name'])
+                
+                if result.get('remaining'):
+                    st.warning(f"⚠️ Unmatched portion: `{result['remaining']}`")
+        else:
+            st.error("❌ Could not decode this SKU. It may not match any configured category.")
+            st.info("💡 Make sure the SKU follows the correct format for one of your product categories.")
+
+# ==================================================
+# SCANNER PAGE
+# ==================================================
+def scanner_page():
+    """QR Scanner page."""
+    with st.sidebar:
+        st.markdown("### 🧭 Navigation")
+        if st.button("🏠 SKU Generator", use_container_width=True):
+            go("home")
+        if st.button("📋 SKU History", use_container_width=True):
+            go("history")
+        if st.button("🔍 SKU Decoder", use_container_width=True):
+            go("decoder")
+        if st.button("📱 QR Scanner", use_container_width=True, type="primary"):
+            pass
+        st.markdown("---")
+        if st.button("⚙️ Settings", use_container_width=True):
+            go("login")
+    
+    st.markdown("<h2 style='text-align: center;'>📱 QR Code Scanner</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666;'>Scan a QR code to decode the SKU</p>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("### 📸 Take Photo")
+        camera_input = st.camera_input("Point camera at QR code", key="qr_camera_main")
+        
+        if camera_input:
+            st.image(camera_input, caption="Captured QR Code", width=200)
+            
+            # Try to decode QR from image
+            try:
+                img = Image.open(camera_input)
+                
+                # Try using qrcode library to read (limited capability)
+                # Since pyzbar isn't available, we'll show manual entry option
+                st.info("📝 **QR Captured!** Please enter the SKU code manually below or use the decoder.")
+                
+            except Exception as e:
+                st.error(f"Error processing image: {str(e)}")
+    
+    with col2:
+        st.markdown("### ✍️ Manual Entry")
+        st.markdown("After scanning, enter the SKU code here:")
+        
+        scanned_sku = st.text_input("Enter scanned SKU", placeholder="e.g., BL20MSF0", key="scanned_sku_input")
+        
+        if scanned_sku:
+            st.markdown("---")
+            st.markdown(f"### Decoding: `{scanned_sku}`")
+            
+            inv = st.session_state["sku_data"]["inventory"]
+            results = decode_sku(scanned_sku, inv)
+            
+            if results:
+                for result in results:
+                    st.success(f"✅ **{result['category']}**")
+                    for part in result['parts']:
+                        st.markdown(f"• **{part['field']}:** `{part['code']}` = {part['name']}")
+                    for extra in result.get('extras', []):
+                        st.markdown(f"• **Extra:** `{extra['code']}` = {extra['name']}")
+            else:
+                st.error("❌ Could not decode SKU")
+    
+    st.markdown("---")
+    st.markdown("### 💡 Tips")
+    st.markdown("""
+    1. **On Mobile:** Your phone's camera app can scan QR codes directly and show the SKU
+    2. **Take Photo:** Use the camera above to capture the QR code image
+    3. **Enter Manually:** Type the SKU code in the manual entry field to decode it
+    """)
+
+# ==================================================
 # ROUTER
 # ==================================================
 if st.session_state["page"] == "home":
@@ -1245,3 +1422,9 @@ elif st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "admin":
     admin()
+elif st.session_state["page"] == "history":
+    history_page()
+elif st.session_state["page"] == "decoder":
+    decoder_page()
+elif st.session_state["page"] == "scanner":
+    scanner_page()
