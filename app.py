@@ -507,41 +507,16 @@ def home():
         
         st.markdown("---")
         
-        # QR Scanner Section
-        st.markdown("### 📱 QR Scanner")
+        # QR Scanner Section - Using camera or manual entry
+        st.markdown("### 📱 Scan QR Code")
+        st.info("📸 Use your phone's camera app to scan any QR code, then paste the SKU above in the decoder.")
         
-        uploaded_qr = st.file_uploader("Upload QR image", type=["png", "jpg", "jpeg"], key="qr_upload")
+        # Alternative: Camera input (works on mobile)
+        camera_input = st.camera_input("Or take a photo of QR code", key="qr_camera")
         
-        if uploaded_qr:
-            try:
-                from PIL import Image
-                from pyzbar.pyzbar import decode as decode_qr
-                
-                img = Image.open(uploaded_qr)
-                decoded_objects = decode_qr(img)
-                
-                if decoded_objects:
-                    qr_data = decoded_objects[0].data.decode('utf-8')
-                    st.success(f"**Scanned SKU:** {qr_data}")
-                    
-                    # Auto-decode the scanned SKU
-                    inv = st.session_state["sku_data"]["inventory"]
-                    results = decode_sku(qr_data, inv)
-                    
-                    if results:
-                        for result in results:
-                            st.info(f"**Category:** {result['category']}")
-                            for part in result['parts']:
-                                st.markdown(f"• **{part['field']}:** {part['code']} = {part['name']}")
-                            for extra in result.get('extras', []):
-                                st.markdown(f"• **Extra:** {extra['code']} = {extra['name']}")
-                else:
-                    st.error("No QR code found in image")
-            except ImportError:
-                st.warning("QR scanning requires pyzbar library. Upload feature limited.")
-                st.info("You can manually enter the SKU in the decoder above.")
-            except Exception as e:
-                st.error(f"Error scanning QR: {str(e)}")
+        if camera_input:
+            st.warning("📝 QR detected! Please manually enter the SKU code in the **SKU Decoder** field above.")
+            st.image(camera_input, caption="Captured image", width=150)
 
     # Pulsating green dot CSS + Header + Responsive styles
     st.markdown("""
