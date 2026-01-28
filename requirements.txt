@@ -1,4 +1,6 @@
 streamlit
 pandas
+qrcode
+pillow
 requests
-qrcode[pil]
+pyzbar
