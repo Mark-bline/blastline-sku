@@ -479,25 +479,9 @@ def home():
         if st.button("⚙️ Settings", use_container_width=True):
             go("login")
 
-    # Pulsating green dot CSS + Header + Responsive styles
+    # Header styles
     st.markdown("""
         <style>
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
-        }
-        .pulse-dot {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            width: 12px;
-            height: 12px;
-            background: #4CAF50;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-            z-index: 9999;
-        }
         .subheading {
             font-size: 18px;
             font-weight: 600;
@@ -505,14 +489,7 @@ def home():
             margin-bottom: 12px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        /* Hide divider on mobile */
-        @media (max-width: 768px) {
-            .desktop-divider {
-                display: none !important;
-            }
-        }
         </style>
-        <div class="pulse-dot"></div>
     """, unsafe_allow_html=True)
 
     # Centered Header
@@ -620,13 +597,14 @@ def home():
     extras_codes = "".join([c["code"] for c in chosen])
     sku = base + (sep if base and extras_codes else "") + extras_codes
     
-    # Build breakdown items as list of (code, name) tuples
+    # Build breakdown items as list of (code, name) tuples - filter out None/empty values
     breakdown_items = []
     for k in ordered_fields(fields):
-        if sel.get(k) and sel[k]["code"]:
-            breakdown_items.append({"code": sel[k]["code"], "name": sel[k]["name"]})
+        if sel.get(k) and sel[k].get("code") and sel[k].get("name"):
+            breakdown_items.append({"code": str(sel[k]["code"]), "name": str(sel[k]["name"])})
     for c in chosen:
-        breakdown_items.append({"code": c["code"], "name": c["name"]})
+        if c.get("code") and c.get("name"):
+            breakdown_items.append({"code": str(c["code"]), "name": str(c["name"])})
 
     with right_col:
         # Right panel with card-style background using container
@@ -635,12 +613,32 @@ def home():
             st.markdown("<p class='subheading'>Generated SKU</p>", unsafe_allow_html=True)
             
             if sku:
-                # SKU box - dynamic width based on content
+                # SKU box - dynamic width with pulsating green dot
                 sku_html = f"""
                 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
                 <style>
                     * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
                     html, body {{ margin: 0; padding: 0; overflow: visible; }}
+                    @keyframes pulse {{
+                        0% {{ box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }}
+                        70% {{ box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }}
+                        100% {{ box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }}
+                    }}
+                    @keyframes fadeOut {{
+                        0% {{ opacity: 1; }}
+                        70% {{ opacity: 1; }}
+                        100% {{ opacity: 0; }}
+                    }}
+                    .pulse-dot {{
+                        width: 10px;
+                        height: 10px;
+                        background: #4CAF50;
+                        border-radius: 50%;
+                        animation: pulse 1s ease-out 3, fadeOut 3s ease-out forwards;
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                    }}
                 </style>
                 <div id="sku-container" onclick="copySKU()" style="
                     background: #e8f4fd;
@@ -655,7 +653,9 @@ def home():
                     box-sizing: border-box;
                     min-width: 200px;
                     max-width: 100%;
+                    position: relative;
                 ">
+                    <div class="pulse-dot"></div>
                     <span style="
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         font-size: 17px;
