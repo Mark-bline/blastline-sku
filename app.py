@@ -559,10 +559,12 @@ def home():
                     sel[f] = {"code": text_val, "name": text_val}
                 else:
                     if opts:
+                        # Show field name as label, dropdown shows Code - Name only
+                        st.markdown(f"<p style='font-size: 12px; color: #666; margin-bottom: 2px;'>{f}</p>", unsafe_allow_html=True)
                         o = st.selectbox(
                             f, 
                             opts, 
-                            format_func=lambda x, field=f: f"{field}: {x['code']} - {x['name']}", 
+                            format_func=lambda x: f"{x['code']} - {x['name']}", 
                             help=f"Select {f}",
                             label_visibility="collapsed"
                         )
@@ -618,10 +620,13 @@ def home():
     extras_codes = "".join([c["code"] for c in chosen])
     sku = base + (sep if base and extras_codes else "") + extras_codes
     
-    config_names = [sel[k]["name"] for k in ordered_fields(fields) if sel.get(k) and sel[k]["name"]]
-    extras_names = [c["name"] for c in chosen]
-    all_names = config_names + extras_names
-    sku_description = " - ".join(all_names) if all_names else ""
+    # Build breakdown items as list of (code, name) tuples
+    breakdown_items = []
+    for k in ordered_fields(fields):
+        if sel.get(k) and sel[k]["code"]:
+            breakdown_items.append({"code": sel[k]["code"], "name": sel[k]["name"]})
+    for c in chosen:
+        breakdown_items.append({"code": c["code"], "name": c["name"]})
 
     with right_col:
         # Right panel with card-style background using container
@@ -682,9 +687,15 @@ def home():
                 """
                 st.components.v1.html(sku_html, height=95)
                 
-                # SKU Breakdown - larger subheading
+                # SKU Breakdown - vertical list format
                 st.markdown("<p class='subheading'>SKU Breakdown</p>", unsafe_allow_html=True)
-                st.markdown(f"<p style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: #555; line-height: 1.5; word-wrap: break-word; max-width: 100%;'>{sku_description}</p>", unsafe_allow_html=True)
+                
+                # Build breakdown HTML as vertical list
+                breakdown_html = "<div style='font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: #555; line-height: 1.8;'>"
+                for item in breakdown_items:
+                    breakdown_html += f"<div><code style='background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 12px;'>{item['code']}</code> - {item['name']}</div>"
+                breakdown_html += "</div>"
+                st.markdown(breakdown_html, unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                 
@@ -741,6 +752,8 @@ def home():
                 
                 # Save to History button
                 st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                # Create description from breakdown items
+                sku_description = " - ".join([item['name'] for item in breakdown_items])
                 if st.button("💾 Save to History", key="save_history", use_container_width=False):
                     add_to_sku_history(sku, sku_description, cat)
                     st.toast(f"✅ Saved: {sku}")
