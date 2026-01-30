@@ -458,7 +458,7 @@ def home():
     with st.sidebar:
         st.markdown("### 🧭 Navigation")
         
-        if st.button("🏠 SKU Generator", use_container_width=True):
+        if st.button("🏠 SKU Generator", use_container_width=True, type="primary"):
             st.session_state["page"] = "home"
             st.rerun()
         
@@ -1355,7 +1355,7 @@ def decoder_page():
 # SCANNER PAGE
 # ==================================================
 def scanner_page():
-    """QR Scanner page."""
+    """QR Scanner page with JavaScript-based scanning."""
     with st.sidebar:
         st.markdown("### 🧭 Navigation")
         if st.button("🏠 SKU Generator", use_container_width=True):
@@ -1371,59 +1371,223 @@ def scanner_page():
             go("login")
     
     st.markdown("<h2 style='text-align: center;'>📱 QR Code Scanner</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666;'>Scan a QR code to decode the SKU</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666;'>Scan a QR code to decode the SKU instantly</p>", unsafe_allow_html=True)
     
     st.markdown("---")
     
-    col1, col2 = st.columns([1, 1])
+    # JavaScript QR Scanner using html5-qrcode library
+    qr_scanner_html = """
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        #qr-reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #qr-reader__scan_region {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        #result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .success-result {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .scanned-sku {
+            font-size: 24px;
+            font-weight: bold;
+            color: #155724;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .copy-btn:hover {
+            background: #218838;
+        }
+        .decode-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .decode-btn:hover {
+            background: #0056b3;
+        }
+        #start-btn, #stop-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        #start-btn {
+            background: #1a73e8;
+            color: white;
+        }
+        #stop-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+    </style>
     
-    with col1:
-        st.markdown("### 📸 Take Photo")
-        camera_input = st.camera_input("Point camera at QR code", key="qr_camera_main")
-        
-        if camera_input:
-            st.image(camera_input, caption="Captured QR Code", width=200)
-            
-            # Try to decode QR from image
-            try:
-                img = Image.open(camera_input)
-                
-                # Try using qrcode library to read (limited capability)
-                # Since pyzbar isn't available, we'll show manual entry option
-                st.info("📝 **QR Captured!** Please enter the SKU code manually below or use the decoder.")
-                
-            except Exception as e:
-                st.error(f"Error processing image: {str(e)}")
+    <div class="btn-container">
+        <button id="start-btn" onclick="startScanner()">📷 Start Camera</button>
+        <button id="stop-btn" onclick="stopScanner()" style="display:none;">⏹️ Stop Camera</button>
+    </div>
     
-    with col2:
-        st.markdown("### ✍️ Manual Entry")
-        st.markdown("After scanning, enter the SKU code here:")
+    <div id="qr-reader"></div>
+    <div id="result-container"></div>
+    
+    <script>
+        let html5QrCode = null;
+        let lastResult = '';
         
-        scanned_sku = st.text_input("Enter scanned SKU", placeholder="e.g., BL20MSF0", key="scanned_sku_input")
+        function startScanner() {
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('stop-btn').style.display = 'inline-block';
+            document.getElementById('result-container').innerHTML = '';
+            
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText, decodedResult) => {
+                    if (decodedText !== lastResult) {
+                        lastResult = decodedText;
+                        onScanSuccess(decodedText);
+                    }
+                },
+                (errorMessage) => {
+                    // Ignore scan errors
+                }
+            ).catch((err) => {
+                document.getElementById('result-container').innerHTML = 
+                    '<div style="color: #dc3545; padding: 20px;">❌ Camera access denied or not available.<br>Please allow camera access and try again.</div>';
+                document.getElementById('start-btn').style.display = 'inline-block';
+                document.getElementById('stop-btn').style.display = 'none';
+            });
+        }
         
-        if scanned_sku:
-            st.markdown("---")
-            st.markdown(f"### Decoding: `{scanned_sku}`")
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('start-btn').style.display = 'inline-block';
+                    document.getElementById('stop-btn').style.display = 'none';
+                });
+            }
+        }
+        
+        function onScanSuccess(decodedText) {
+            // Play a beep sound
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.3;
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 150);
+            } catch(e) {}
             
-            inv = st.session_state["sku_data"]["inventory"]
-            results = decode_sku(scanned_sku, inv)
-            
-            if results:
-                for result in results:
-                    st.success(f"✅ **{result['category']}**")
-                    for part in result['parts']:
-                        st.markdown(f"• **{part['field']}:** `{part['code']}` = {part['name']}")
-                    for extra in result.get('extras', []):
-                        st.markdown(f"• **Extra:** `{extra['code']}` = {extra['name']}")
-            else:
-                st.error("❌ Could not decode SKU")
+            document.getElementById('result-container').innerHTML = `
+                <div class="success-result">
+                    <div style="color: #155724; font-size: 16px;">✅ QR Code Scanned!</div>
+                    <div class="scanned-sku">${decodedText}</div>
+                    <button class="copy-btn" onclick="copyToClipboard('${decodedText}')">📋 Copy SKU</button>
+                    <button class="decode-btn" onclick="window.parent.postMessage({type:'qr_scanned', sku:'${decodedText}'}, '*')">🔍 Decode SKU</button>
+                </div>
+            `;
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                btn.innerText = '✓ Copied!';
+                setTimeout(() => btn.innerText = '📋 Copy SKU', 2000);
+            });
+        }
+    </script>
+    """
+    
+    # Display the QR scanner
+    st.components.v1.html(qr_scanner_html, height=550)
+    
+    st.markdown("---")
+    
+    # Manual entry as fallback
+    st.markdown("### ✍️ Or Enter SKU Manually")
+    
+    scanned_sku = st.text_input("Enter SKU code", placeholder="e.g., BL20MSF0", key="scanner_manual_input")
+    
+    if scanned_sku:
+        st.markdown("---")
+        st.markdown(f"### Decoding: `{scanned_sku}`")
+        
+        inv = st.session_state["sku_data"]["inventory"]
+        results = decode_sku(scanned_sku, inv)
+        
+        if results:
+            for result in results:
+                st.success(f"✅ **{result['category']}**")
+                
+                for part in result['parts']:
+                    col1, col2, col3 = st.columns([1, 1, 2])
+                    with col1:
+                        st.markdown(f"**{part['field']}**")
+                    with col2:
+                        st.code(part['code'])
+                    with col3:
+                        st.markdown(part['name'])
+                
+                for extra in result.get('extras', []):
+                    col1, col2, col3 = st.columns([1, 1, 2])
+                    with col1:
+                        st.markdown("**Extra**")
+                    with col2:
+                        st.code(extra['code'])
+                    with col3:
+                        st.markdown(extra['name'])
+        else:
+            st.error("❌ Could not decode SKU")
     
     st.markdown("---")
     st.markdown("### 💡 Tips")
     st.markdown("""
-    1. **On Mobile:** Your phone's camera app can scan QR codes directly and show the SKU
-    2. **Take Photo:** Use the camera above to capture the QR code image
-    3. **Enter Manually:** Type the SKU code in the manual entry field to decode it
+    - Click **Start Camera** to activate the scanner
+    - Point your camera at any QR code
+    - The SKU will be detected automatically with a beep sound
+    - Click **Copy SKU** or **Decode SKU** to see the breakdown
     """)
 
 # ==================================================
