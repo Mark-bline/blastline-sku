@@ -21,7 +21,11 @@ MAX_SKU_HISTORY = 15  # Maximum number of SKUs to keep in history
 # ==================================================
 # SETUP
 # ==================================================
-st.set_page_config(page_title="Blastline SKU Configurator", layout="wide")
+st.set_page_config(
+    page_title="Blastline SKU Configurator", 
+    layout="wide",
+    initial_sidebar_state="collapsed"  # Start with sidebar collapsed
+)
 
 # ==================================================
 # GITHUB STORAGE
@@ -361,6 +365,50 @@ def go(p):
     st.session_state["page"] = p
     st.rerun()
 
+def render_sidebar_nav(current_page="home"):
+    """Render the sidebar navigation with consistent styling."""
+    
+    # Add JavaScript to collapse sidebar on mobile after click
+    st.markdown("""
+        <style>
+        /* Make sidebar collapse smoother on mobile */
+        @media (max-width: 768px) {
+            [data-testid="stSidebar"][aria-expanded="true"] {
+                min-width: 100%;
+            }
+        }
+        </style>
+        <script>
+        // Function to collapse sidebar
+        function collapseSidebar() {
+            const sidebar = window.parent.document.querySelector('[data-testid="stSidebarCollapsedControl"]');
+            if (sidebar) {
+                sidebar.click();
+            }
+        }
+        </script>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("### 🧭 Navigation")
+    
+    pages = [
+        ("home", "🏠 SKU Generator"),
+        ("history", "📋 SKU History"),
+        ("decoder", "🔍 SKU Decoder"),
+        ("scanner", "📱 QR Scanner"),
+    ]
+    
+    for page_id, page_name in pages:
+        btn_type = "primary" if current_page == page_id else "secondary"
+        if st.button(page_name, use_container_width=True, type=btn_type, key=f"nav_{page_id}_{current_page}"):
+            if page_id != current_page:
+                go(page_id)  # Use go() to trigger full rerun
+    
+    st.markdown("---")
+    
+    if st.button("⚙️ Settings", use_container_width=True, key=f"nav_settings_{current_page}"):
+        go("login")
+
 def add_to_sku_history(sku, description, category):
     """Add a SKU to history (avoid duplicates, limit size)."""
     if not sku:
@@ -455,29 +503,9 @@ def decode_sku(sku_code, inventory):
 # ==================================================
 def home():
     """Main SKU configuration page."""
+    
     with st.sidebar:
-        st.markdown("### 🧭 Navigation")
-        
-        if st.button("🏠 SKU Generator", use_container_width=True, type="primary"):
-            st.session_state["page"] = "home"
-            st.rerun()
-        
-        if st.button("📋 SKU History", use_container_width=True):
-            st.session_state["page"] = "history"
-            st.rerun()
-        
-        if st.button("🔍 SKU Decoder", use_container_width=True):
-            st.session_state["page"] = "decoder"
-            st.rerun()
-        
-        if st.button("📱 QR Scanner", use_container_width=True):
-            st.session_state["page"] = "scanner"
-            st.rerun()
-        
-        st.markdown("---")
-        
-        if st.button("⚙️ Settings", use_container_width=True):
-            go("login")
+        render_sidebar_nav("home")
 
     # Header styles
     st.markdown("""
@@ -1216,18 +1244,7 @@ def admin():
 def history_page():
     """SKU History page."""
     with st.sidebar:
-        st.markdown("### 🧭 Navigation")
-        if st.button("🏠 SKU Generator", use_container_width=True):
-            go("home")
-        if st.button("📋 SKU History", use_container_width=True, type="primary"):
-            pass
-        if st.button("🔍 SKU Decoder", use_container_width=True):
-            go("decoder")
-        if st.button("📱 QR Scanner", use_container_width=True):
-            go("scanner")
-        st.markdown("---")
-        if st.button("⚙️ Settings", use_container_width=True):
-            go("login")
+        render_sidebar_nav("history")
     
     st.markdown("<h2 style='text-align: center;'>📋 SKU History</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #666;'>Recently generated SKU codes</p>", unsafe_allow_html=True)
@@ -1281,18 +1298,7 @@ def history_page():
 def decoder_page():
     """SKU Decoder page."""
     with st.sidebar:
-        st.markdown("### 🧭 Navigation")
-        if st.button("🏠 SKU Generator", use_container_width=True):
-            go("home")
-        if st.button("📋 SKU History", use_container_width=True):
-            go("history")
-        if st.button("🔍 SKU Decoder", use_container_width=True, type="primary"):
-            pass
-        if st.button("📱 QR Scanner", use_container_width=True):
-            go("scanner")
-        st.markdown("---")
-        if st.button("⚙️ Settings", use_container_width=True):
-            go("login")
+        render_sidebar_nav("decoder")
     
     st.markdown("<h2 style='text-align: center;'>🔍 SKU Decoder</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #666;'>Enter a SKU code to see what each part means</p>", unsafe_allow_html=True)
@@ -1357,18 +1363,7 @@ def decoder_page():
 def scanner_page():
     """QR Scanner page with JavaScript-based scanning."""
     with st.sidebar:
-        st.markdown("### 🧭 Navigation")
-        if st.button("🏠 SKU Generator", use_container_width=True):
-            go("home")
-        if st.button("📋 SKU History", use_container_width=True):
-            go("history")
-        if st.button("🔍 SKU Decoder", use_container_width=True):
-            go("decoder")
-        if st.button("📱 QR Scanner", use_container_width=True, type="primary"):
-            pass
-        st.markdown("---")
-        if st.button("⚙️ Settings", use_container_width=True):
-            go("login")
+        render_sidebar_nav("scanner")
     
     st.markdown("<h2 style='text-align: center;'>📱 QR Code Scanner</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #666;'>Scan a QR code to decode the SKU instantly</p>", unsafe_allow_html=True)
@@ -1432,34 +1427,74 @@ def scanner_page():
         .decode-btn:hover {
             background: #0056b3;
         }
-        #start-btn, #stop-btn {
-            padding: 12px 24px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 10px 5px;
-        }
         #start-btn {
+            padding: 16px 32px;
+            font-size: 18px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
             background: #1a73e8;
             color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #start-btn:hover {
+            background: #1557b0;
         }
         #stop-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 4px solid #fff;
             background: #dc3545;
-            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #stop-btn:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+        #stop-btn:active {
+            transform: scale(0.95);
+        }
+        #stop-btn .stop-icon {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 3px;
         }
         .btn-container {
             text-align: center;
             margin: 15px 0;
         }
+        .stop-container {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .stop-container.active {
+            display: block;
+        }
     </style>
     
-    <div class="btn-container">
+    <div class="btn-container" id="start-container">
         <button id="start-btn" onclick="startScanner()">📷 Start Camera</button>
-        <button id="stop-btn" onclick="stopScanner()" style="display:none;">⏹️ Stop Camera</button>
     </div>
     
     <div id="qr-reader"></div>
+    
+    <div class="stop-container" id="stop-container">
+        <button id="stop-btn" onclick="stopScanner()" title="Stop Camera">
+            <div class="stop-icon"></div>
+        </button>
+        <p style="margin-top: 8px; color: #666; font-size: 12px;">Tap to stop</p>
+    </div>
+    
     <div id="result-container"></div>
     
     <script>
@@ -1467,8 +1502,8 @@ def scanner_page():
         let lastResult = '';
         
         function startScanner() {
-            document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('stop-btn').style.display = 'inline-block';
+            document.getElementById('start-container').style.display = 'none';
+            document.getElementById('stop-container').classList.add('active');
             document.getElementById('result-container').innerHTML = '';
             
             html5QrCode = new Html5Qrcode("qr-reader");
@@ -1491,16 +1526,16 @@ def scanner_page():
             ).catch((err) => {
                 document.getElementById('result-container').innerHTML = 
                     '<div style="color: #dc3545; padding: 20px;">❌ Camera access denied or not available.<br>Please allow camera access and try again.</div>';
-                document.getElementById('start-btn').style.display = 'inline-block';
-                document.getElementById('stop-btn').style.display = 'none';
+                document.getElementById('start-container').style.display = 'block';
+                document.getElementById('stop-container').classList.remove('active');
             });
         }
         
         function stopScanner() {
             if (html5QrCode) {
                 html5QrCode.stop().then(() => {
-                    document.getElementById('start-btn').style.display = 'inline-block';
-                    document.getElementById('stop-btn').style.display = 'none';
+                    document.getElementById('start-container').style.display = 'block';
+                    document.getElementById('stop-container').classList.remove('active');
                 });
             }
         }
